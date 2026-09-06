@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.mypy_cache/
+.pytest_cache/
+venv/
+.venv/
+.python-version
+uv.lock
+mazegenerator*
+.vscode
+tile.png
+pacman.png
+test.py
+
+*.whl					#mazegen zip file
