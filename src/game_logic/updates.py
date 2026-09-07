@@ -46,6 +46,9 @@ def update_entitys(game: Game) -> None:
 
 
 def update_game_state(game: Game):
+    if game.time <= 0:
+        game.game_is_over()
+        return
     role = getattr(game, "role", "solo")
     if role == "guest":
         # Rien à calculer : pac-gums, score, niveaux, morts sont décidés

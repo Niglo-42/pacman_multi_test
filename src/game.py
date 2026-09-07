@@ -10,7 +10,6 @@ from .game_logic.direction import Dir
 from .game_logic.ghosts_state import GhostState, GhostStateManager
 from .game_logic.updates import update_entitys, update_game_state, get_fruits
 from .init import init_ghosts, init_maze, init_player, init_new_level
-from config.parser_config import print_obj
 
 
 class Game:
@@ -22,6 +21,7 @@ class Game:
         self.start_new_game(self.args)
 
     def start_new_game(self, args: dict):
+        self.time = 9
         self.fps = args.get("fps", 60)
         self.run = True
         self.path = args.get("highscore_filename", "highscore.json")
@@ -46,14 +46,17 @@ class Game:
             width = args.get("width", 6)
             height = args.get("height", 6)
             seed = args.get("seed", 1)
-        self.maze = init_maze(self, width, height, seed)
-
+        try:
+            self.maze = init_maze(self, width, height, seed)
+        except Exception as e:
+            print(e)
         self.level = 1
         self.eaten_pellet: int = 0
         self.frightened_timer: float = 0.0
         self.global_timer: int = 0
+        self.scinder = args.get("scinder", False)
         self.state_timer: tuple[int, int] = (0, 0)
-        self.render = Render(self.maze, self.first)
+        self.render = Render(self.maze, self.first, self.scinder)
         self.first = False
         self.menu = Menu(self.render)
         self.ghost_state = GhostState
@@ -108,7 +111,7 @@ class Game:
         pygame.quit()
 
     def play(self) -> str:
-        while self.run:
+        while self.run or self.time <= 0:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.run = False
@@ -116,7 +119,7 @@ class Game:
                 if event.type == KEYDOWN:
                     if event.key == K_ESCAPE:
                         return "pause"
-            if self.player.lives <= 0:
+            if self.player.lives <= 0 or self.time <= 0:
                 self.game_is_over()
                 return "get_input"
             update_entitys(self)
@@ -126,8 +129,10 @@ class Game:
             update_game_state(self)
             self.render.putstr(f"Highscore: {self.player.score}",
                                self.render.score, 0)
-            self.render.putstr(f"Level: {self.level}", self.render.lvl, 1)
+            self.render.putstr(f"Level: {self.level} Time: {self.time:.2f}",
+                               self.render.lvl, 1)
             pygame.display.flip()
+            self.time -= 1 / self.fps
             self.clock.tick(self.fps)  # vaut un sleep qui sync sur fps / 1000
         pygame.quit()
 

@@ -13,20 +13,33 @@ def collide_point(rect: pygame.Rect, x: int, y: int) -> bool:
             rect.y <= y <= rect.y + rect.height)
 
 
+class Info:
+    def __init__(self, w, h):
+        self.current_w = w
+        self.current_h = h
+
+
 class Render:
     @classmethod
-    def init_invariant(cls) -> None:
+    def init_invariant(cls, scinder: bool) -> None:
         cls.info = pygame.display.Info()
+        cls.info = Info(cls.info.current_w, cls.info.current_h)
 
         pygame.display.set_caption("Pac-Man")
-        cls.screen = pygame.display.set_mode(
-            (cls.info.current_w, cls.info.current_h), pygame.FULLSCREEN)
+        if scinder:
+            cls.info.current_h //= 2
+            cls.info.current_w //= 2
+            cls.screen = pygame.display.set_mode(
+                (cls.info.current_w, cls.info.current_h))
+        else:
+            cls.screen = pygame.display.set_mode(
+                (cls.info.current_w, cls.info.current_h), pygame.FULLSCREEN)
         cls.screen_rect = cls.screen.get_rect()
         cls.tile_size = 8
 
-    def __init__(self, maze: Maze, first: bool):
+    def __init__(self, maze: Maze, first: bool, scinder: bool):
         if first:
-            self.init_invariant()
+            self.init_invariant(scinder)
         self.maze = maze
         ratio = min(Render.info.current_h // (maze.height + 4),
                     Render.info.current_w // (maze.width + 4))

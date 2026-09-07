@@ -3,8 +3,10 @@ import json
 import ast
 from typing import Any
 
+
 def print_obj(args: dict) -> None:
-        print(json.dumps(args, indent=4))
+    print(json.dumps(args, indent=4))
+
 
 class Parser:
     clamps = {
@@ -49,8 +51,9 @@ class Parser:
     def comment(path):
         with open(path, "r", encoding="utf-8") as file:
             if ".json" not in path:
-                raise ValueError(f"{path} is not an accepted"
-                                "format, only .json are allowed")
+                raise ValueError(
+                    f"{path} is not an accepted"
+                    "format, only .json are allowed")
             return Parser.clean_commentary(file)
 
     @staticmethod
@@ -66,23 +69,23 @@ class Parser:
         params_clamp = Parser.clamps
         try:
             params, com_lines, islist = Parser.comment(argv[0])
+            print(params, com_lines, islist)
         except Exception as e:
             print(e)
             return Parser.clamp_tuple(params_clamp)
-        
         for i, (k, v) in enumerate(params.items(), 2 + 1 * (islist)):
             real_line_nb = Parser.get_line_nb_including_coms(com_lines, i)
             if k not in Parser.clamps.keys():
                 print(f"{k} is not accepted, line {real_line_nb}")
                 continue
-            
+
             if k == "highscore_filename":
                 if isinstance(v, str):
                     if ".json" in v and not v.isspace():
                         params_clamp[k] = v
                 else:
-                    print(
-                    f"{v} is not an accepted path, error line: {real_line_nb}")
+                    print(f"{v} is not an accepted path, error line:"
+                          f" {real_line_nb}")
             elif k == "audio_enable" or k == "cheat_mode":
                 if isinstance(v, bool):
                     params_clamp[k] = v

@@ -104,4 +104,4 @@ def init_new_level(self: Game, seed: int | None = None) -> None:
         self.player2 = init_player(self, 1, saved_lives2)
         self.player2.score = score2
     self.ghosts = init_ghosts(self)
-    self.render = Render(self.maze, False)
+    self.render = Render(self.maze, False, self.scinder)

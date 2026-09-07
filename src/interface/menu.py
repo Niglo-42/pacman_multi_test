@@ -83,13 +83,15 @@ class Menu:
         max_char_len = 30
         line_spacing = 2
         n = max(len(scores), 1)
-        available_height = Render.screen.get_height() // (line_spacing * (n + 2))
+        available_height = (Render.screen.get_height() //
+                            (line_spacing * (n + 2)))
         size = min(
             available_height,
             Render.screen.get_width() // max_char_len)
         size = max(size, 1)
         font = pygame.font.Font("font/press_start_2p.ttf", size)
-        sorted_dict = dict(sorted(scores.items(), key=lambda x: x[1], reverse=True))
+        sorted_dict = dict(sorted(scores.items(),
+                                  key=lambda x: x[1], reverse=True))
         for i, (name, score) in enumerate(sorted_dict.items(), 1):
             self.render.puttamere(name + ": " + str(score), font, i * 2)
         pygame.display.flip()
@@ -103,7 +105,7 @@ class Menu:
             clock.tick(fps)
 
     def get_user_name(self, font, path: str, score: int,
-                      clock, fps, max_len=16):
+                      clock, fps, max_len=10):
         pygame.key.start_text_input()
         user_name = ""
         active = True
@@ -122,9 +124,11 @@ class Menu:
                     pad_h = pad[1] + txt_surface.get_height()
                     error_surface.fill("#000000")
                     Render.screen.blit(error_surface,
-                        (error_surface.get_rect(center=(pad[0], pad_h))))
+                                       (error_surface.get_rect(
+                                        center=(pad[0], pad_h))))
                 elif event.type == pygame.TEXTINPUT:
-                    if len(user_name) < max_len:
+                    if len(user_name) < max_len and (
+                            event.text == ' ' or str(event.text).isalnum()):
                         user_name += event.text
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_BACKSPACE:
