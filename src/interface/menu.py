@@ -107,7 +107,7 @@ class Menu:
             clock.tick(fps)
 
     def get_user_name(self, font, path: str, score: int,
-                      clock, fps, max_len=10):
+                      clock, fps, won: bool, max_len=10):
         pygame.key.start_text_input()
         user_name = ""
         active = True

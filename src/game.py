@@ -102,11 +102,11 @@ class Game:
                 action = "start"
             if action == "play":
                 action = self.play()
-            if action == "get_input":
+            if action == "get_input" or action ==  "won":
                 action = self.menu.get_user_name(self.render.font,
                                                  self.path,
                                                  self.player.score,
-                                                 self.clock, self.fps)
+                                                 self.clock, self.fps, True)
                 self.start_new_game(self.args)
         pygame.quit()
 
@@ -128,7 +128,8 @@ class Game:
             self.render.draw_maze_on_surf_screen()
             draw_entitys(self)
             get_fruits(self, self.maze, self.render.tile_size)
-            update_game_state(self)
+            if update_game_state(self):
+                return "won"
             self.render.putstr(f"Highscore: {self.player.score}",
                                self.render.score, 0)
             self.render.putstr(f"Level: {self.level} Time: {self.time:.2f}",

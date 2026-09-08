@@ -45,21 +45,23 @@ def update_entitys(game: Game) -> None:
         g.update(game, flashing)
 
 
-def update_game_state(game: Game):
+def update_game_state(game: Game) -> bool:
     if game.time <= 0:
         game.game_is_over()
-        return
+        return False
     role = getattr(game, "role", "solo")
     if role == "guest":
         # Rien à calculer : pac-gums, score, niveaux, morts sont décidés
         # par l'hôte et nous arrivent déjà résolus via apply_remote_state.
         draw_lives(game)
-        return
+        return False
 
     game.newly_eaten_tiles = []
     game.global_timer += 1
     state_manager = game.state_manager
     if game.eaten_pellet == game.total_pellet:
+        if game.level == 10:
+            return True
         game.level_is_won()
     update_speeds(game.level, game.ghosts, game.player,
                   state_manager.actual_state)
@@ -79,6 +81,7 @@ def update_game_state(game: Game):
     if role == "host":
         from ..network.netcode import build_state_packet
         game.net.send(build_state_packet(game))
+    return False
 
 
 def update_pellets(game: Game, player: Player, map: list[list[int]]) -> bool:
