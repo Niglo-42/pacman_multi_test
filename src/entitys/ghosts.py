@@ -139,7 +139,7 @@ class Ghost(Entity):
         for d in cardinals:
             nx, ny = d.add_delta(*start)
             if 0 <= nx < maze.width and 0 <= ny < maze.height and \
-                    map[ny][nx] <= 2:
+                    map[ny][nx] <= 3:
                 if (nx, ny) == target:
                     return d
                 visited.add((nx, ny))

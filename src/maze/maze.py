@@ -249,10 +249,10 @@ class Maze:
 
     def get_opposite_corner(self, pos: tuple[int, int]) -> tuple[int, int]:
         best_dist = -1.0
-        best_corner = pos
+        further_corner = pos
         for corner in self.get_ghosts_spawns():
             dist = math.dist(pos, corner)
             if dist > best_dist:
                 best_dist = dist
-                best_corner = corner
-        return best_corner
+                further_corner = corner
+        return further_corner

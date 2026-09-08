@@ -14,12 +14,13 @@ def check_collision(game: Game, player: Player, ghosts: list[Ghost]) -> None:
         if ghost.state == GhostState.EYES:
             continue
         if offset_detection(game, ghost, player) or \
-                swept_check_detection(game, ghost, player):
+                swept_check_detection(ghost, player):
             if ghost.state.is_lethal and not game.cheat_mode:
                 game.player_died(player, ghosts)
             elif ghost.state == GhostState.FRIGHTENED:
                 ghost.alive = False
                 ghost.state = GhostState.EYES
+                ghost.changing_side = False
                 ghost.target = game.maze.get_opposite_corner(ghost.position)
                 player.score += game.point_per_ghost * \
                     sum([not g.alive for g in ghosts])
@@ -42,7 +43,7 @@ def offset_detection(game: Game, ghost: Ghost, player: Player) -> bool:
     return False
 
 
-def swept_check_detection(game: Game, ghost: Ghost, player: Player) -> bool:
+def swept_check_detection(ghost: Ghost, player: Player) -> bool:
     if ghost.position == player.last_pos and ghost.last_pos == player.position:
         return True
     return False
