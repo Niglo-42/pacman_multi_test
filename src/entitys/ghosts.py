@@ -23,6 +23,7 @@ class Ghost(Entity):
     target: tuple[int, int] = (0, 0)
     changing_side: bool = False
     last_pos = spawn
+    blinky: "Ghost | None" = None
 
     _afraid: list[pygame.Surface] | None = None
     _eyes: list[pygame.Surface] | None = None
@@ -44,10 +45,12 @@ class Ghost(Entity):
 
     @property
     def afraid(self) -> list[pygame.Surface]:
+        assert Ghost._afraid is not None
         return Ghost._afraid
 
     @property
     def eyes(self) -> list[pygame.Surface]:
+        assert Ghost._eyes is not None
         return Ghost._eyes
 
     def update(self, game: Game, is_flashing: bool) -> None:
@@ -62,39 +65,41 @@ class Ghost(Entity):
                 self.changing_side = False
         self.update_position(game.maze)
         if self.state == GhostState.EYES:
-            self.update_ghost_tile(Ghost._eyes, True, is_flashing)
+            self.update_ghost_tile(self.eyes, True, is_flashing)
         elif self.state == GhostState.FRIGHTENED:
-            self.update_ghost_tile(Ghost._afraid, False, is_flashing)
+            self.update_ghost_tile(self.afraid, False, is_flashing)
         else:
             self.update_tile()
 
     def update_dir(self, target: tuple[int, int], maze: Maze) -> Dir:
         if self.state == GhostState.EYES:
             self.direction = self.eyed_bfs(maze)
-            return
+            return self.direction
         banned = [self.direction.opposite, Dir.X]
         candidates = [d for d in Dir if maze.is_open(self.position, d)
                       and d not in banned]
         if not candidates:
             self.direction = self.direction.opposite
-            return
+            return self.direction
 
         #  add randomness to the choices to avoid loops
         rnd, direction = self.add_randomness(candidates)
         if rnd is True:
             self.direction = direction
-            return
+            return self.direction
 
         best_c = None
         best_dist = float("inf")
         for c in candidates:
             tried_pos = c.add_delta_speed(self.position, 1)
-            distance = np.linalg.norm(np.subtract(target, tried_pos))
+            distance = float(np.linalg.norm(np.subtract(target, tried_pos)))
             if distance < best_dist:
                 best_dist = distance
                 best_c = c
             continue
+        assert best_c is not None
         self.direction = best_c
+        return self.direction
 
     def add_randomness(self, candidates: list[Dir]) -> tuple[bool, Dir]:
         dice = random.randint(1, 6)
@@ -121,13 +126,14 @@ class Ghost(Entity):
 
     def eyed_bfs(self, maze: Maze) -> Dir:
         map = maze.map
+        assert map is not None
         start = self.position
         target = self.target
         if start == target:
             return Dir.X
 
         cardinals = (Dir.N, Dir.E, Dir.S, Dir.W)
-        queue = deque()
+        queue: deque[tuple[int, int, Dir]] = deque()
         visited = {start}
 
         for d in cardinals:
@@ -155,7 +161,7 @@ class Ghost(Entity):
 
 
 class Blinky(Ghost):
-    def __init__(self, spawn: tuple[int, int], size):
+    def __init__(self, spawn: tuple[int, int], size: int) -> None:
         super().__init__()
         self.name = "Blinky"
         self.spawn = spawn
@@ -186,7 +192,7 @@ class Blinky(Ghost):
 
 
 class Pinky(Ghost):
-    def __init__(self, spawn: tuple[int, int], size):
+    def __init__(self, spawn: tuple[int, int], size: int) -> None:
         super().__init__()
         self.name = "Pinky"
         self.spawn = spawn
@@ -213,11 +219,11 @@ class Pinky(Ghost):
 
 
 class Inky(Ghost):
-    def __init__(self, spawn: tuple[int, int], size):
+    def __init__(self, spawn: tuple[int, int], size: int) -> None:
         super().__init__()
         self.name = "Inky"
         self.spawn = spawn
-        self.blinky = Blinky
+        self.blinky = None
         self.position = spawn
         self.anim = [
                     [4, 5, 4, 5],  # n
@@ -235,8 +241,9 @@ class Inky(Ghost):
                 (size * 2,
                  size * 2)) for i in range(65, 73, 1)]
 
-    def get_target(self, player: Player, maze: Maze):
+    def get_target(self, player: Player, maze: Maze) -> tuple[int, int]:
         if self.state == GhostState.CHASE:
+            assert self.blinky is not None
             player_x, player_y = player.position
             d_x, d_y = player.direction.delta
             pivot = (player_x + 2 * d_x, player_y + 2 * d_y)
@@ -247,7 +254,7 @@ class Inky(Ghost):
 
 
 class Clyde(Ghost):
-    def __init__(self, spawn: tuple[int, int], size):
+    def __init__(self, spawn: tuple[int, int], size: int) -> None:
         super().__init__()
         self.name = "Clyde"
         self.spawn = spawn
@@ -268,7 +275,7 @@ class Clyde(Ghost):
                 (size * 2,
                  size * 2)) for i in range(78, 86, 1)]
 
-    def get_target(self, player: Player, maze: Maze):
+    def get_target(self, player: Player, maze: Maze) -> tuple[int, int]:
         if self.state == GhostState.CHASE:
             dist = math.dist(self.position, player.position)
             if dist < 8:

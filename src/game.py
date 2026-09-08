@@ -1,3 +1,4 @@
+from typing import Any
 import pygame
 from pygame.locals import K_ESCAPE, KEYDOWN, K_SPACE
 from .interface.render import Render
@@ -13,31 +14,34 @@ from .init import init_ghosts, init_maze, init_player, init_new_level
 
 
 class Game:
-    def __init__(self, args):
+    def __init__(self, args: dict[str, Any]) -> None:
         pygame.display.init()
         pygame.font.init()
         self.args = args
         self.first = True
         self.start_new_game(self.args)
 
-    def start_new_game(self, args: dict):
-        self.time = 90
-        self.fps = args.get("fps", 60)
+    def start_new_game(self, args: dict[str, Any]) -> None:
+        self.time: float = 90
+        self.fps: int = args.get("fps", 60)
         self.run = True
-        self.path = args.get("highscore_filename", "highscore.json")
-        self.cheat_mode = args.get("cheat_mode", False)
-        self.points_per_pacgum = args.get("points_per_pacgum", 50)
-        self.points_per_super_pacgum = \
+        self.path: str = args.get("highscore_filename", "highscore.json")
+        self.cheat_mode: bool = args.get("cheat_mode", False)
+        self.points_per_pacgum: int = args.get("points_per_pacgum", 50)
+        self.points_per_super_pacgum: int = \
             args.get("points_per_super_pacgum", 100)
-        self.point_per_ghost = args.get("points_per_ghost", 100)
+        self.point_per_ghost: int = args.get("points_per_ghost", 100)
         self.total_pellet: int = 0
+        self.newly_eaten_tiles: list[tuple[int, int]] = []
+        self.last_level_seed: int = 0
 
         # --- réseau : "solo" (défaut), "host" ou "guest" ---
-        self.role = args.get("role", "solo")
+        self.role: str = args.get("role", "solo")
         self.net = args.get("net")  # NetHost | NetGuest | None
         if self.role == "guest":
             # le labyrinthe doit être un clone EXACT de celui de l'hôte :
             # on reprend son seed/dimensions plutôt que la config locale.
+            assert self.net is not None
             remote_args = self.net.init_data["args"]
             width = remote_args.get("width", 6)
             height = remote_args.get("height", 6)
@@ -54,12 +58,12 @@ class Game:
         self.eaten_pellet: int = 0
         self.frightened_timer: float = 0.0
         self.global_timer: int = 0
-        self.scinder = args.get("scinder", False)
+        self.scinder: bool = args.get("scinder", False)
         self.state_timer: tuple[int, int] = (0, 0)
         self.render = Render(self.maze, self.first, self.scinder)
         self.first = False
         self.menu = Menu(self.render)
-        self.ghost_state = GhostState
+        self.ghost_state = GhostState.SCATTER
         self.elroy_cooldown: tuple[bool, int] = (False, 0)
         self.state_manager = GhostStateManager()
         self.audio_enabled = args.get("audio_enable", False)
@@ -68,12 +72,15 @@ class Game:
         # c'est l'avatar (réseau) de l'invité ; côté invité c'est
         # l'avatar (réseau, affichage seul) du joueur hôte.
         if self.role in ("host", "guest") or args.get("nb_player", 0) == 2:
-            self.player2 = init_player(self, 1, args.get("lives", 3))
+            self.player2: Player | None = init_player(
+                self, 1, args.get("lives", 3))
         else:
             self.player2 = None
         self.ghosts = init_ghosts(self)
-        self.player.surf.blit(self.player.tiles[1], (0, 0))
-        self.max_lives = args.get("lives", 3)
+        player_surf = self.player.surf
+        assert player_surf is not None
+        player_surf.blit(self.player.tiles[1], (0, 0))
+        self.max_lives: int = args.get("lives", 3)
         self.clock = pygame.time.Clock()
         # print_obj(args)
         # les 33 premières tiles sont des pacmans
@@ -82,7 +89,7 @@ class Game:
     #     for k, v in args.items():
     #         setattr(self, k, v)
 
-    def monitor(self):
+    def monitor(self) -> None:
         action = "start"
         while self.run:
             if action == "start":
@@ -102,11 +109,10 @@ class Game:
                 action = "start"
             if action == "play":
                 action = self.play()
-            if action == "get_input" or action ==  "won":
-                action = self.menu.get_user_name(self.render.font,
-                                                 self.path,
-                                                 self.player.score,
-                                                 self.clock, self.fps, (action ==  "won"))
+            if action == "get_input" or action == "won":
+                action = self.menu.get_user_name(
+                    self.render.font, self.path, self.player.score,
+                    self.clock, self.fps, (action == "won"))
                 self.start_new_game(self.args)
         pygame.quit()
 
@@ -138,6 +144,7 @@ class Game:
             self.time -= 1 / self.fps
             self.clock.tick(self.fps)  # vaut un sleep qui sync sur fps / 1000
         pygame.quit()
+        return "quit"
 
     def player_died(self, player: Player, ghosts: list[Ghost]) -> None:
         self.elroy_cooldown = (True, self.global_timer)
@@ -178,5 +185,6 @@ class Game:
         play_intermission(self)
         init_new_level(self)
         if self.role == "host":
+            assert self.net is not None
             self.net.send_new_level(self.level, self.last_level_seed)
         pygame.time.wait(500)

@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from ..game import Game
 
 
-def draw_lives(self: Game):
+def draw_lives(self: Game) -> None:
     x, y = self.render.lives_rect.topleft
     for i in range(self.max_lives):
         rect = self.render.lives_img.get_rect(
@@ -20,7 +20,7 @@ def draw_lives(self: Game):
             Render.screen.fill((0, 0, 0), rect)
 
 
-def draw_fruits(self: Game):
+def draw_fruits(self: Game) -> None:
     x, y = self.render.lives_rect.topleft
     x += (self.maze.width // 2) * self.render.tile_size
     for i, fruit in enumerate(self.render.fruits):
@@ -34,7 +34,7 @@ def draw_entitys(self: Game) -> None:
     self.render.draw_entity(self.player)
     for g in self.ghosts:
         self.render.draw_entity(g)
-    
+
 
 def play_intermission(self: Game) -> None:
     duration_frames = self.fps * 3
@@ -63,7 +63,8 @@ def play_intermission(self: Game) -> None:
         Render.screen.blit(anim_tile, (int(pacman_x), y_pos))
 
         if self.ghosts:
-            Render.screen.blit(self.ghosts[rndm_ghost].surf,
-                               (int(ghost_x), y_pos))
+            ghost_surf = self.ghosts[rndm_ghost].surf
+            assert ghost_surf is not None
+            Render.screen.blit(ghost_surf, (int(ghost_x), y_pos))
         pygame.display.flip()
         self.clock.tick(self.fps)

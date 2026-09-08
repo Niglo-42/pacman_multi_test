@@ -16,6 +16,7 @@ def update_entitys(game: Game) -> None:
     if role == "guest":
         # Je ne simule QUE mon propre déplacement (contre les murs, pas
         # contre les fantômes) : l'hôte reste seul juge du reste.
+        assert game.net is not None
         game.player.update(game.maze)
         game.net.send_input(game.player)
         state = game.net.poll_state()
@@ -32,8 +33,10 @@ def update_entitys(game: Game) -> None:
     if role == "host":
         # Le joueur invité n'est jamais simulé localement : sa position
         # vient du réseau et est injectée avant collisions/pac-gums.
+        assert game.net is not None
         guest_input = game.net.poll_input()
         if guest_input:
+            assert game.player2 is not None
             from ..network.netcode import apply_guest_input
             apply_guest_input(game.player2, guest_input)
     elif game.player2:
@@ -59,6 +62,8 @@ def update_game_state(game: Game) -> bool:
     game.newly_eaten_tiles = []
     game.global_timer += 1
     state_manager = game.state_manager
+    game_map = game.maze.map
+    assert game_map is not None
     if game.eaten_pellet == game.total_pellet:
         if game.level == 10:
             return True
@@ -69,16 +74,17 @@ def update_game_state(game: Game) -> bool:
 
     if game.player2:
         check_collision(game, game.player2, game.ghosts)
-        if update_pellets(game, game.player2, game.maze.map):
+        if update_pellets(game, game.player2, game_map):
             state_manager.get_frightened(game)
 
-    if update_pellets(game, game.player, game.maze.map):
+    if update_pellets(game, game.player, game_map):
         # si une super_pacgum a été mangée
         state_manager.get_frightened(game)
     state_manager.update_ghosts_state(game)
     draw_lives(game)
 
     if role == "host":
+        assert game.net is not None
         from ..network.netcode import build_state_packet
         game.net.send(build_state_packet(game))
     return False
@@ -105,12 +111,14 @@ def update_pellets(game: Game, player: Player, map: list[list[int]]) -> bool:
         if map[y][x] != 0 and hasattr(game, "newly_eaten_tiles"):
             game.newly_eaten_tiles.append((x, y))
         map[y][x] = 0
-        game.render.draw_on_maze(game.maze.tiles[0], y, x)
+        tiles = game.maze.tiles
+        assert tiles is not None
+        game.render.draw_on_maze(tiles[0], y, x)
 
     return energizer
 
 
-def get_fruits(game: Game, maze: Maze, tile_size: int):
+def get_fruits(game: Game, maze: Maze, tile_size: int) -> None:
     if (game.eaten_pellet == 70) and maze.flag_fruit == 0:
         maze.flag_fruit = 0b1
         game.render.fruits[0].blit(maze.add_fruit(game.player.position,

@@ -4,6 +4,7 @@ import math
 from ..game_logic.direction import Dir
 from pygame import Surface
 
+
 class MazeGenError(Exception):
     pass
 
@@ -27,13 +28,15 @@ class Maze:
         # l'hôte et l'invité affichent un labyrinthe identique en LAN.
         self.rng = random.Random(seed)
         self.grid = self.maze_loader()
-        self.map = None
-        self.tiles = None
-        self.fruit_tiles = None
-        self.surf = None
+        self.map: list[list[int]] | None = None
+        self.tiles: list[Surface] | None = None
+        self.fruit_tiles: list[Surface] | None = None
+        self.surf: Surface | None = None
         self.flag_fruit = 0
 
-    def get_first_zero(self, pacman_x, pacman_y):
+    def get_first_zero(self, pacman_x: int,
+                       pacman_y: int) -> tuple[int, int]:
+        assert self.map is not None
         for y, row in enumerate(self.map):
             for x, col in enumerate(row):
                 if col == 0:
@@ -43,7 +46,11 @@ class Maze:
                         return (x, y)
         return (1, 1)
 
-    def add_fruit(self, pacman_pos, tile_size, value) -> Surface:
+    def add_fruit(self, pacman_pos: tuple[int, int], tile_size: int,
+                  value: int) -> Surface:
+        assert self.map is not None
+        assert self.surf is not None
+        assert self.fruit_tiles is not None
         fruit_idx = self.rng.randint(0, 7)
         x, y = self.get_first_zero(*pacman_pos)
         self.map[y][x] = value
@@ -56,6 +63,7 @@ class Maze:
         replace 3 % of the pellets to superGum
         position = left or right
         """
+        assert self.map is not None
         y_bottom = self.height * 95 // 100
         y_top = self.height * 5 // 100
         seq = [((1), (1, y_top)),
@@ -75,6 +83,7 @@ class Maze:
 
     def is_open(self, position: tuple[int, int],
                 direction: Dir) -> bool:
+        assert self.map is not None
         col, row = position
         d_x, d_y = direction.delta
         cell = self.map[row + d_y][col + d_x]
@@ -86,13 +95,14 @@ class Maze:
                 size=(self.width, self.height),
                 perfect=False, seed=self.seed)
 
-            maze_grid = maze_gen.maze
+            maze_grid: list[list[int]] = maze_gen.maze
             return maze_grid
 
         except Exception as e:
             raise MazeGenError(f"Error occured while loading the maze: {e}")
 
-    def is_in42(self, y, x) -> bool:
+    def is_in42(self, y: int, x: int) -> bool:
+        assert self.map is not None
         if self.map[y - 1][x] != 24:
             return False
         if self.map[y][x + 1] != 25:
@@ -104,21 +114,24 @@ class Maze:
         return True
 
     def kills_caves(self) -> None:
-        def is_pow_2(cardinal) -> bool:
+        game_map = self.map
+        assert game_map is not None
+
+        def is_pow_2(cardinal: int) -> bool:
             return cardinal != 0 and not (cardinal & cardinal - 1)
 
-        def is_four_pellets(y, x):
-            if self.map[y - 1][x] > 2:
+        def is_four_pellets(y: int, x: int) -> bool:
+            if game_map[y - 1][x] > 2:
                 return False
-            if self.map[y][x + 1] > 2:
+            if game_map[y][x + 1] > 2:
                 return False
-            if self.map[y][x - 1] > 2:
+            if game_map[y][x - 1] > 2:
                 return False
-            if self.map[y + 1][x] > 2:
+            if game_map[y + 1][x] > 2:
                 return False
             return True
 
-        old_map = [row[:] for row in self.map]
+        old_map = [row[:] for row in game_map]
         dirs = [Dir.E, Dir.S, Dir.W, Dir.N]
         for y in range(1, self.height - 1):
             for x in range(1, self.width - 1):
@@ -155,7 +168,6 @@ class Maze:
                     if old_map[y - 1][x + 1] > 2:
                         old_map[y][x] = 1
 
-
         island = set()
         for y in range(1, self.height - 1):
             for x in range(1, self.width - 1):
@@ -182,36 +194,37 @@ class Maze:
             cardinal |= ((y, x - 1) in island) << 3
             if cardinal == 15:
                 if old_map[y - 1][x + 1] == 1:
-                    self.map[y][x] = 19
+                    game_map[y][x] = 19
                 elif old_map[y + 1][x + 1] == 1:
-                    self.map[y][x] = 16
-                elif self.map[y + 1][x - 1] == 1:
-                    self.map[y][x] = 17
-                elif self.map[y - 1][x - 1] == 1:
-                    self.map[y][x] = 18
+                    game_map[y][x] = 16
+                elif game_map[y + 1][x - 1] == 1:
+                    game_map[y][x] = 17
+                elif game_map[y - 1][x - 1] == 1:
+                    game_map[y][x] = 18
             else:
                 if is_pow_2(~cardinal & 0xf):
                     cardinal = ~cardinal & 0xf
                     if cardinal & 1:  # nord
-                        self.map[y][x] = 24
+                        game_map[y][x] = 24
                     elif cardinal & 2:  # est
-                        self.map[y][x] = 25
+                        game_map[y][x] = 25
                     elif cardinal & 4:  # sud
-                        self.map[y][x] = 26
+                        game_map[y][x] = 26
                     elif cardinal & 8:  # ouest
-                        self.map[y][x] = 27
+                        game_map[y][x] = 27
                 else:
                     if cardinal & 6 == 6:  # NW
-                        self.map[y][x] = 20
+                        game_map[y][x] = 20
                     elif cardinal & 12 == 12:  # NE
-                        self.map[y][x] = 21
+                        game_map[y][x] = 21
                     elif cardinal & 9 == 9:  # SE
-                        self.map[y][x] = 22
+                        game_map[y][x] = 22
                     elif cardinal & 3 == 3:  # SW
-                        self.map[y][x] = 23
+                        game_map[y][x] = 23
                 # 20 if corner, # 24 if junction
 
-    def get_spawn(self):
+    def get_spawn(self) -> tuple[int, int]:
+        assert self.map is not None
         mid_x, mid_y = self.width // 2, self.height // 2
         if mid_x == 0 and mid_y == 0:
             return (mid_x, mid_y)
@@ -227,6 +240,7 @@ class Maze:
                 if (ny, nx) not in visited:
                     visited.add((ny, nx))
                     queue.append((ny, nx))
+        raise MazeGenError("No spawn tile found in maze")
 
     def get_ghosts_spawns(self) -> list[tuple[int, int]]:
         w, h = self.width, self.height

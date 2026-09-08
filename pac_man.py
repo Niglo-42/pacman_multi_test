@@ -1,10 +1,11 @@
+from typing import Any
 from config.parser_config import Parser, print_obj
 from src.game import Game
 from src.network.netcode import NetHost, NetGuest, can_reach_host
 import sys
 
 
-def setup_network(args: dict) -> dict:
+def setup_network(args: dict[str, Any]) -> dict[str, Any]:
     """Petit prompt console (même esprit que serveur/lan_client.py) pour
     choisir solo / hôte / invité avant de lancer la fenêtre pygame.
     À terme, ce choix peut migrer dans le menu graphique (menu.py) en
@@ -12,6 +13,7 @@ def setup_network(args: dict) -> dict:
     print("Mode de jeu : [1] Solo/local  [2] Héberger (LAN)  "
           "[3] Rejoindre (LAN) [4] Multi/scinder Rejoindre [5] Host")
     choice = input("> ").strip()
+    net: NetHost | NetGuest
 
     if choice == "2":
         args["role"] = "host"
@@ -29,10 +31,10 @@ def setup_network(args: dict) -> dict:
         host_ip = input("IP de l'hôte : ").strip()
         if not can_reach_host(host_ip):
             print("Impossible de joindre l'hôte en direct — sur le "
-                 "réseau des VMs 42, ça peut être normal si les postes "
-                 "sont isolés entre eux. Vérifiez que vous êtes sur le "
-                 "même réseau / testez `nc -u` entre les deux, ou "
-                 "repassez par un relai (cf. serveur/phone_server.py).")
+                  "réseau des VMs 42, ça peut être normal si les postes "
+                  "sont isolés entre eux. Vérifiez que vous êtes sur le "
+                  "même réseau / testez `nc -u` entre les deux, ou "
+                  "repassez par un relai (cf. serveur/phone_server.py).")
             return args
         net = NetGuest(host_ip)
         print("Connexion à l'hôte...")
@@ -45,10 +47,10 @@ def setup_network(args: dict) -> dict:
         host_ip = input("IP de l'hôte : ").strip()
         if not can_reach_host(host_ip):
             print("Impossible de joindre l'hôte en direct — sur le "
-                 "réseau des VMs 42, ça peut être normal si les postes "
-                 "sont isolés entre eux. Vérifiez que vous êtes sur le "
-                 "même réseau / testez `nc -u` entre les deux, ou "
-                 "repassez par un relai (cf. serveur/phone_server.py).")
+                  "réseau des VMs 42, ça peut être normal si les postes "
+                  "sont isolés entre eux. Vérifiez que vous êtes sur le "
+                  "même réseau / testez `nc -u` entre les deux, ou "
+                  "repassez par un relai (cf. serveur/phone_server.py).")
             return args
         net = NetGuest(host_ip)
         print("Connexion à l'hôte...")
@@ -83,6 +85,7 @@ def main(argv: list[str]) -> int:
     args = setup_network(args)
     game = Game(args)
     game.monitor()
+    return 0
 
 
 if __name__ == "__main__":

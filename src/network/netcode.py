@@ -33,7 +33,7 @@ pas, gardez l'idée du relai : il suffit de faire tourner ce même protocole
 sans changer une ligne de logique de jeu.
 """
 from __future__ import annotations
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 import socket
 import json
 import time
@@ -64,7 +64,7 @@ def can_reach_host(host_ip: str, port: int = DEFAULT_PORT,
     try:
         s.sendto(b'{"type":"ping"}', (host_ip, port))
         data, _ = s.recvfrom(RECV_BUFSIZE)
-        return json.loads(data.decode("utf-8")).get("type") == "pong"
+        return bool(json.loads(data.decode("utf-8")).get("type") == "pong")
     except (socket.timeout, OSError, json.JSONDecodeError,
             UnicodeDecodeError):
         return False
@@ -76,21 +76,22 @@ def can_reach_host(host_ip: str, port: int = DEFAULT_PORT,
 #  Sérialisation des entités
 # --------------------------------------------------------------------- #
 
-def player_to_dict(p: Player) -> dict:
+def player_to_dict(p: Player) -> dict[str, Any]:
     return {"pos": list(p.position), "offset": list(p.offset_xy),
             "dir": p.direction.name, "alive": p.alive,
             "score": p.score, "lives": p.lives}
 
 
-def ghost_to_dict(g: Ghost) -> dict:
+def ghost_to_dict(g: Ghost) -> dict[str, Any]:
     return {"pos": list(g.position), "offset": list(g.offset_xy),
             "dir": g.direction.name, "state": g.state.name,
             "alive": g.alive}
 
 
-def build_state_packet(game: Game) -> dict:
+def build_state_packet(game: Game) -> dict[str, Any]:
     """Construit le paquet envoyé par l'hôte à chaque frame."""
-    packet = {
+    assert game.player2 is not None
+    packet: dict[str, Any] = {
         "type": "state",
         "player1": player_to_dict(game.player),     # le joueur de l'hôte
         "player2": player_to_dict(game.player2),    # écho de l'invité
@@ -104,7 +105,7 @@ def build_state_packet(game: Game) -> dict:
     return packet
 
 
-def apply_player_dict(player: Player, data: dict) -> None:
+def apply_player_dict(player: Player, data: dict[str, Any]) -> None:
     """Applique l'état reçu du réseau à un Player qui n'est PAS le
     joueur physiquement contrôlé sur cette machine (donc jamais de
     .update() dessus, juste position + tuile d'animation)."""
@@ -120,7 +121,7 @@ def apply_player_dict(player: Player, data: dict) -> None:
     player.update_tile()
 
 
-def apply_guest_input(player2: Player, data: dict) -> None:
+def apply_guest_input(player2: Player, data: dict[str, Any]) -> None:
     """Côté hôte : injecte la position envoyée par l'invité dans l'objet
     Player local qui représente l'invité, AVANT le calcul des collisions
     et des pac-gums (qui restent, eux, calculés par l'hôte)."""
@@ -133,7 +134,8 @@ def apply_guest_input(player2: Player, data: dict) -> None:
     player2.update_tile()
 
 
-def apply_ghost_dict(ghost: Ghost, data: dict, flashing: bool) -> None:
+def apply_ghost_dict(ghost: Ghost, data: dict[str, Any],
+                     flashing: bool) -> None:
     from ..game_logic.direction import Dir
     from ..game_logic.ghosts_state import GhostState
     ghost.position = tuple(data["pos"])
@@ -149,16 +151,21 @@ def apply_ghost_dict(ghost: Ghost, data: dict, flashing: bool) -> None:
         ghost.update_tile()
 
 
-def apply_remote_state(game: Game, state: dict) -> None:
+def apply_remote_state(game: Game, state: dict[str, Any]) -> None:
     """Côté invité : applique l'état complet reçu de l'hôte."""
+    assert game.player2 is not None
     apply_player_dict(game.player2, state["player1"])
     flashing = state.get("flashing", False)
     for ghost, data in zip(game.ghosts, state["ghosts"]):
         apply_ghost_dict(ghost, data, flashing)
+    game_map = game.maze.map
+    tiles = game.maze.tiles
+    assert game_map is not None
+    assert tiles is not None
     for x, y in state.get("eaten_tiles", []):
-        if game.maze.map[y][x] != 0:
-            game.maze.map[y][x] = 0
-            game.render.draw_on_maze(game.maze.tiles[0], y, x)
+        if game_map[y][x] != 0:
+            game_map[y][x] = 0
+            game.render.draw_on_maze(tiles[0], y, x)
     game.eaten_pellet = state.get("eaten_pellet", game.eaten_pellet)
 
     # réconciliation : si mon perso local dérive trop de ce que l'hôte
@@ -182,13 +189,13 @@ def apply_remote_state(game: Game, state: dict) -> None:
 # --------------------------------------------------------------------- #
 
 class NetHost:
-    def __init__(self, port: int = DEFAULT_PORT):
+    def __init__(self, port: int = DEFAULT_PORT) -> None:
         self.sock = _make_socket()
         self.sock.bind(("", port))
-        self.guest_addr = None
-        self.last_guest_input = None
+        self.guest_addr: tuple[str, int] | None = None
+        self.last_guest_input: dict[str, Any] | None = None
 
-    def wait_for_guest(self, args: dict, seed: int,
+    def wait_for_guest(self, args: dict[str, Any], seed: int,
                        timeout: float = 300.0) -> bool:
         """Bloquant : attend le HELLO de l'invité puis lui envoie la
         config nécessaire pour régénérer un labyrinthe identique."""
@@ -214,7 +221,7 @@ class NetHost:
         # args doit être sérialisable en JSON (c'est déjà le cas : int/
         # bool/str produits par Parser.parse_config)
         safe_args = {k: v for k, v in args.items()
-                    if isinstance(v, (int, float, str, bool))}
+                     if isinstance(v, (int, float, str, bool))}
         init_packet = json.dumps({"type": "init", "args": safe_args,
                                   "seed": seed}).encode("utf-8")
         for _ in range(5):  # renvoyé plusieurs fois, au cas où perdu
@@ -222,7 +229,7 @@ class NetHost:
             time.sleep(0.05)
         return True
 
-    def poll_input(self) -> dict | None:
+    def poll_input(self) -> dict[str, Any] | None:
         try:
             while True:
                 data, addr = self.sock.recvfrom(RECV_BUFSIZE)
@@ -239,7 +246,7 @@ class NetHost:
             pass
         return self.last_guest_input
 
-    def send(self, packet: dict) -> None:
+    def send(self, packet: dict[str, Any]) -> None:
         if self.guest_addr is None:
             return
         try:
@@ -257,14 +264,15 @@ class NetHost:
 # --------------------------------------------------------------------- #
 
 class NetGuest:
-    def __init__(self, host_ip: str, port: int = DEFAULT_PORT):
+    def __init__(self, host_ip: str, port: int = DEFAULT_PORT) -> None:
         self.host_addr = (host_ip, port)
         self.sock = _make_socket()
-        self.latest_state: dict | None = None
-        self.init_data: dict | None = None
-        self.pending_new_level: dict | None = None
+        self.latest_state: dict[str, Any] | None = None
+        self.init_data: dict[str, Any] | None = None
+        self.pending_new_level: dict[str, Any] | None = None
 
-    def say_hello_and_wait_init(self, timeout: float = 300.0) -> dict | None:
+    def say_hello_and_wait_init(
+            self, timeout: float = 300.0) -> dict[str, Any] | None:
         hello = b'{"type":"hello"}'
         self.sock.setblocking(True)
         self.sock.settimeout(1.0)
@@ -274,7 +282,7 @@ class NetGuest:
                 try:
                     self.sock.sendto(hello, self.host_addr)
                     data, _ = self.sock.recvfrom(RECV_BUFSIZE)
-                    payload = json.loads(data.decode("utf-8"))
+                    payload: dict[str, Any] = json.loads(data.decode("utf-8"))
                     if payload.get("type") == "init":
                         self.init_data = payload
                         return payload
@@ -300,7 +308,7 @@ class NetGuest:
         except OSError:
             pass
 
-    def poll_state(self) -> dict | None:
+    def poll_state(self) -> dict[str, Any] | None:
         try:
             while True:
                 data, _ = self.sock.recvfrom(RECV_BUFSIZE)

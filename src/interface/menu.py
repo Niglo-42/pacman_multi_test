@@ -1,37 +1,39 @@
+from typing import Any
 import pygame
 from .render import Render, collide_point
 import json
 
 
 class ToggleBox:
-    def __init__(self, string, size, boolean):
+    def __init__(self, string: str, size: int, boolean: bool) -> None:
         self.name = string
         self.font = pygame.font.Font("font/press_start_2p.ttf", size)
         self.text = self.font.render(string, False, "#dedeff")
         self.bool_val = boolean
         self.bool = self.font.render("ON" if boolean else "OFF", False,
-                                   "#0ec43c" if boolean else "#ff0000")
+                                     "#0ec43c" if boolean else "#ff0000")
         self.t_size_w, self.t_size_h = self.text.get_size()
         self.b_size_w, self.b_size_h = self.bool.get_size()
         self.surf = pygame.Surface((self.t_size_w + self.b_size_w + 10,
                                     self.t_size_h))
         self.draw_box()
 
-    def flip(self):
+    def flip(self) -> None:
         self.bool_val = not self.bool_val
         self.bool = self.font.render(
             "ON" if self.bool_val else "OFF",
             False, "#0ec43c" if self.bool_val else "#ff0000")
         self.b_size_w, self.b_size_h = self.bool.get_size()
 
-    def draw_box(self):
+    def draw_box(self) -> None:
         self.surf.fill(0)
-        self.surf.blit(self.text, (0 , 0))
+        self.surf.blit(self.text, (0, 0))
         self.surf.blit(self.bool, (self.t_size_w + 10, 0))
 
 
 class ParamBox:
-    def __init__(self, string, size, min_v, max_v, range_size, value):
+    def __init__(self, string: str, size: int, min_v: int, max_v: int,
+                 range_size: int, value: int) -> None:
         self.name = string
         self.font = pygame.font.Font("font/press_start_2p.ttf", size)
         self.text = self.font.render(string, False, "#dedeff")
@@ -51,18 +53,20 @@ class ParamBox:
         self.draw_box(range_size)
         self.pad_w = self.surf.get_size()[0] // 2
 
-    def draw_box(self, range_size):
+    def draw_box(self, range_size: int) -> None:
         percent = self.percent
         self.range_box.fill("#dee7de")
-        self.range_box.blit(self.range, (-int(range_size * (1 - percent)) , 0))
-        self.surf.blit(self.range_box, (self.t_size_w + 10 , 0))
+        self.range_box.blit(self.range, (-int(range_size * (1 - percent)), 0))
+        self.surf.blit(self.range_box, (self.t_size_w + 10, 0))
         self.surf.blit(self.text, (0, 0))
-        rect = self.font_val.get_rect(midtop=(self.t_size_w + 10 + range_size // 2, 0))
+        rect = self.font_val.get_rect(
+            midtop=(self.t_size_w + 10 + range_size // 2, 0))
         self.surf.blit(self.font_val, rect)
 
 
 class RangeBox(ParamBox):
-    def __init__(self, string, size, min_v, max_v, range_size, value):
+    def __init__(self, string: str, size: int, min_v: int, max_v: int,
+                 range_size: int, value: int) -> None:
         super().__init__(string, size, min_v, max_v, range_size, value)
 
 
@@ -71,7 +75,8 @@ class Menu:
         self.render = render
         self.w, self.h = Render.screen.get_size()
 
-    def score(self, path: str, clock, fps):
+    def score(self, path: str, clock: pygame.time.Clock,
+              fps: int) -> str:
         active = True
         try:
             with open(path, "r") as file:
@@ -105,16 +110,18 @@ class Menu:
                    event.key == pygame.K_ESCAPE:
                     return "start"
             clock.tick(fps)
+        return "start"
 
-    def get_user_name(self, font, path: str, score: int,
-                      clock, fps, won: bool, max_len=10):
+    def get_user_name(self, font: pygame.font.Font, path: str, score: int,
+                      clock: pygame.time.Clock, fps: int, won: bool,
+                      max_len: int = 10) -> str:
         pygame.key.start_text_input()
         user_name = ""
         active = True
         pad = Render.screen.get_rect().center
         txt_surface = font.render(user_name + "|", True, (255, 255, 255))
         Render.screen.fill(0)
-        error_surface = None
+        error_surface: pygame.Surface | None = None
         flag_errased = False
         frame = 0
         if won:
@@ -176,7 +183,8 @@ class Menu:
             json.dump(current, file)
         return "start"
 
-    def param_menu(self, config: dict, clock, fps):
+    def param_menu(self, config: dict[str, Any], clock: pygame.time.Clock,
+                   fps: int) -> dict[str, Any]:
         clamps = {
             "width": (6, 33),
             "height": (6, 33),
@@ -190,7 +198,8 @@ class Menu:
         }
         Render.screen.fill(0)
         toggles = ("cheat_mode", "audio_enable")
-        boxes, toggle_boxes = [], []
+        boxes: list[RangeBox] = []
+        toggle_boxes: list[ToggleBox] = []
         nb_boxes = len(clamps.keys()) + len(toggles)
         font_size = self.h // (nb_boxes * 4 + 2)
         range_size = Render.screen.get_size()[0] // 10
@@ -261,7 +270,7 @@ class Menu:
             pygame.display.flip()
             clock.tick(fps)
 
-    def main_menu(self, clock, fps):
+    def main_menu(self, clock: pygame.time.Clock, fps: int) -> str:
         Render.screen.fill(0)
         nb_btn = 4
         # size = ratio w/h 248px/1179px
@@ -300,7 +309,7 @@ class Menu:
             pygame.display.flip()
             clock.tick(fps)
 
-    def pause_menu(self, clock, fps):
+    def pause_menu(self, clock: pygame.time.Clock, fps: int) -> str:
         Render.screen.fill(0)
         nb_btn = 2
         # size = ratio w/h 248px/1179px

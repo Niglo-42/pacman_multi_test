@@ -12,9 +12,11 @@ FRIGHT_TIMER = {1: 6, 2: 5, 3: 4, 4: 3, 5: 2, 6: 5, 7: 2, 8: 2, 9: 1,
 FRIGHT_FLASHES = {1: 5, 9: 3, 10: 5, 12: 3, 14: 5, 15: 3, 17: 0, 18: 3, 19: 0}
 
 #  SCATTER / CHASE alternance
-PHASE_DURATIONS = [[7, 20, 7, 20, 5, 20, 5],
-                   [7, 20, 7, 20, 5, 1033, 1/60],
-                   [5, 20, 5, 20, 5, 1037, 1/60]]
+PHASE_DURATIONS: list[list[float]] = [
+    [7, 20, 7, 20, 5, 20, 5],
+    [7, 20, 7, 20, 5, 1033, 1 / 60],
+    [5, 20, 5, 20, 5, 1037, 1 / 60],
+]
 
 ELROY_COOLDOWN = 7
 
@@ -46,7 +48,7 @@ class GhostState(Enum):
 
 
 class GhostStateManager:
-    def __init__(self):
+    def __init__(self) -> None:
         self.actual_state: GhostState = GhostState.SCATTER
         self.last_state: GhostState = GhostState.SCATTER
 
@@ -71,7 +73,7 @@ class GhostStateManager:
             return self.last_state
         return self.actual_state
 
-    def get_frightened(self, game: Game):
+    def get_frightened(self, game: Game) -> None:
         game.frightened_timer = game.global_timer
         self.actual_state = GhostState.FRIGHTENED
         for ghost in game.ghosts:
@@ -100,7 +102,7 @@ class GhostStateManager:
     def manage_end_fright(self, game: Game) -> None:
         if (game.global_timer - game.frightened_timer) >= \
                 (game.fps * self.fright_timer(game.level)):
-            game.point_per_ghost = game.args.get("points_per_ghost")
+            game.point_per_ghost = game.args.get("points_per_ghost", 100)
             for ghost in game.ghosts:
                 if not ghost.state == GhostState.EYES:
                     self.modify_ghost_state(self.last_state, ghost)

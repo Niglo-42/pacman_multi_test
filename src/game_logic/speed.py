@@ -52,7 +52,8 @@ def update_ghost_speed(level: int, ghost: Ghost) -> None:
         ghost.speed = speeds[0] * BASE_SPEED
 
 
-def update_player_speed(level: int, player: Player, ghoststate: GhostState):
+def update_player_speed(level: int, player: Player,
+                        ghoststate: GhostState) -> None:
     if level == 1:
         speeds = PAC_MAN_SPEED[0]
     elif level <= 4:

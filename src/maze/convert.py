@@ -44,8 +44,8 @@ class Convert:
     ]
 
     @staticmethod
-    def get_trad(cardinal, val) -> list[list[int]]:
-        def is_only_one_wall(cardinal) -> bool:
+    def get_trad(cardinal: int, val: int) -> list[list[int]]:
+        def is_only_one_wall(cardinal: int) -> bool:
             return cardinal != 0 and not cardinal & (cardinal - 1)
         res = [list(row) for row in Convert.match_int[val]]
         if cardinal == 0:
@@ -87,7 +87,10 @@ class Convert:
                     res[0][0] = 12
         return res
 
-    def modify_corner(grid, corner, row, col) -> list[list[list | list[int]]]:
+    @staticmethod
+    def modify_corner(grid: list[list[list[list[int]]]],
+                      corner: list[tuple[int, int, int, int]],
+                      row: int, col: int) -> list[list[list[list[int]]]]:
         for y in range(row):
             for x in range(col):
                 current = corner[y * col + x]
@@ -104,10 +107,10 @@ class Convert:
 
     @staticmethod
     def cell2tiles(maze: Maze) -> list[list[int]]:
-        def isnot_last_row_or_col(x, y, w, h) -> bool:
+        def isnot_last_row_or_col(x: int, y: int, w: int, h: int) -> bool:
             return x < w - 1 and y < h - 1
 
-        def get_external_walls(x, y, w, h) -> int:
+        def get_external_walls(x: int, y: int, w: int, h: int) -> int:
             res = 0
             if (y == 0):
                 res |= 1
@@ -118,8 +121,8 @@ class Convert:
             if x == 0:
                 res |= 8
             return res
-        tiles = []
-        corners = []
+        tiles: list[list[list[list[int]]]] = []
+        corners: list[tuple[int, int, int, int]] = []
         for y in range(maze.height):
             tiles.append([])
             for x in range(maze.width):
@@ -128,12 +131,13 @@ class Convert:
                 if isnot_last_row_or_col(x, y, maze.width, maze.height):
                     corners.append(
                         Convert.corner_match[Convert.get_corner(maze, y, x)])
-        tiles = Convert.modify_corner(
+        merged = Convert.modify_corner(
             tiles, corners, maze.height - 1, maze.width - 1)
-        tiles = Convert.flat(tiles, maze.width, maze.height)
-        return tiles
+        return Convert.flat(merged, maze.width, maze.height)
 
-    def flat(tiles: list[list[list[list[int]]]], w, h) -> list[list[int]]:
+    @staticmethod
+    def flat(tiles: list[list[list[list[int]]]], w: int,
+             h: int) -> list[list[int]]:
         row = []
         for y in range(h):
             for one_third in range(3):
@@ -144,7 +148,7 @@ class Convert:
         return row
 
     @staticmethod
-    def get_corner(maze, y, x) -> int:
+    def get_corner(maze: Maze, y: int, x: int) -> int:
         res = 0
         current = maze.grid[y][x]
         right = maze.grid[y][x + 1]

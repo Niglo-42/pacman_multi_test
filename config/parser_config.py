@@ -4,12 +4,12 @@ import ast
 from typing import Any
 
 
-def print_obj(args: dict) -> None:
+def print_obj(args: dict[str, Any]) -> None:
     print(json.dumps(args, indent=4))
 
 
 class Parser:
-    clamps = {
+    clamps: dict[str, str | tuple[int, int] | tuple[bool, bool]] = {
             "highscore_filename": "highscore.json",
             "width": (6, 33),
             "height": (6, 33),
@@ -40,6 +40,7 @@ class Parser:
         clean_json = '\n'.join(clean)
         return (ast.literal_eval(clean_json), lines, isline)
 
+    @staticmethod
     def get_line_nb_including_coms(com_lines: list[int], line: int) -> int:
         acc = 0
         for com_line in com_lines:
@@ -48,7 +49,7 @@ class Parser:
         return line + acc
 
     @staticmethod
-    def comment(path):
+    def comment(path: str) -> tuple[dict[str, Any], list[int], bool]:
         with open(path, "r", encoding="utf-8") as file:
             if ".json" not in path:
                 raise ValueError(
@@ -57,16 +58,17 @@ class Parser:
             return Parser.clean_commentary(file)
 
     @staticmethod
-    def clamp_tuple(arg: dict) -> dict:
+    def clamp_tuple(arg: dict[str, Any]) -> dict[str, Any]:
         for k, v in arg.items():
             if isinstance(v, tuple):
                 arg[k] = v[0]
         return arg
 
-    def parse_config(argv: list[str]) -> dict:
+    @staticmethod
+    def parse_config(argv: list[str]) -> dict[str, Any]:
         if len(argv) != 1:
             raise ValueError(f"This program takes 1 arg, not {len(argv)}")
-        params_clamp = Parser.clamps
+        params_clamp: dict[str, Any] = Parser.clamps
         try:
             params, com_lines, islist = Parser.comment(argv[0])
             print(params, com_lines, islist)

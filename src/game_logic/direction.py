@@ -13,16 +13,18 @@ class Dir(Enum):
     def delta(self) -> tuple[int, int]:
         return (self.value[0], self.value[1])
 
-    def add_delta(self, x, y) -> tuple[int, int]:
+    def add_delta(self, x: int, y: int) -> tuple[int, int]:
         dx, dy = self.delta
         return (dx + x, dy + y)
 
-    def add_delta_speed(self, xy, speed) -> tuple[int, int]:
+    def add_delta_speed(self, xy: tuple[int, int],
+                        speed: int) -> tuple[int, int]:
         x, y = xy
         dx, dy = self.delta
         return dx * speed + x, dy * speed + y
 
-    def add_delta_speed_f(self, xy, speed) -> tuple[float, float]:
+    def add_delta_speed_f(self, xy: tuple[float, float],
+                          speed: float) -> tuple[float, float]:
         x, y = xy
         dx, dy = self.delta
         return dx * speed + x, dy * speed + y

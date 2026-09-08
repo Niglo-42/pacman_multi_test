@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from .maze.maze import Maze
 
 
-def init_audio(self: Game):
+def init_audio(self: Game) -> None:
     self.audio_enabled = False
     # la suite fonctionnera que sur les imac pas sur mon intel #snif
     # try:
@@ -81,7 +81,7 @@ def init_new_level(self: Game, seed: int | None = None) -> None:
     self.state_timer = (0, 0)
     self.frightened_timer = 0
     self.elroy_cooldown = (False, 0)
-    self.ghosts_state = GhostState.SCATTER
+    self.ghost_state = GhostState.SCATTER
 
     # en LAN, l'hôte choisit le seed et le transmet à l'invité (via le
     # paquet réseau "new_level") pour que les deux régénèrent le même
