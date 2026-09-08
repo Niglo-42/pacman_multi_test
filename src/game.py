@@ -106,7 +106,7 @@ class Game:
                 action = self.menu.get_user_name(self.render.font,
                                                  self.path,
                                                  self.player.score,
-                                                 self.clock, self.fps, True)
+                                                 self.clock, self.fps, (action ==  "won"))
                 self.start_new_game(self.args)
         pygame.quit()
 

@@ -111,11 +111,11 @@ def update_pellets(game: Game, player: Player, map: list[list[int]]) -> bool:
 
 
 def get_fruits(game: Game, maze: Maze, tile_size: int):
-    if (game.eaten_pellet == 7) and maze.flag_fruit == 0:
+    if (game.eaten_pellet == 70) and maze.flag_fruit == 0:
         maze.flag_fruit = 0b1
         game.render.fruits[0].blit(maze.add_fruit(game.player.position,
                                                   tile_size, 3), (0, 0))
-    elif (game.eaten_pellet == 17) and maze.flag_fruit == 1:
+    elif (game.eaten_pellet == 170) and maze.flag_fruit == 1:
         maze.flag_fruit = 0b11
         game.render.fruits[1].blit(maze.add_fruit(game.player.position,
                                                   tile_size, 3), (0, 0))

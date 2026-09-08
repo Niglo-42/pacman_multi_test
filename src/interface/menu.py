@@ -117,6 +117,8 @@ class Menu:
         error_surface = None
         flag_errased = False
         frame = 0
+        if won:
+            self.render.puttamere("you won !", font, 0)
         while active:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
