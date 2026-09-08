@@ -65,9 +65,9 @@ def update_game_state(game: Game) -> bool:
     game_map = game.maze.map
     assert game_map is not None
     if game.eaten_pellet == game.total_pellet:
+        game.level_is_won()
         if game.level == 10:
             return True
-        game.level_is_won()
     update_speeds(game.level, game.ghosts, game.player,
                   state_manager.actual_state)
     check_collision(game, game.player, game.ghosts)

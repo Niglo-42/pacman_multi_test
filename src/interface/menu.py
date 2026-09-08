@@ -113,7 +113,7 @@ class Menu:
         return "start"
 
     def get_user_name(self, font: pygame.font.Font, path: str, score: int,
-                      clock: pygame.time.Clock, fps: int, won: bool,
+                      clock: pygame.time.Clock, fps: int,
                       max_len: int = 10) -> str:
         pygame.key.start_text_input()
         user_name = ""
@@ -124,8 +124,6 @@ class Menu:
         error_surface: pygame.Surface | None = None
         flag_errased = False
         frame = 0
-        if won:
-            self.render.puttamere("you won !", font, 0)
         while active:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:

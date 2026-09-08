@@ -76,7 +76,6 @@ def init_new_level(self: Game, seed: int | None = None) -> None:
     from .interface.render import Render
     saved_lives = self.player.lives
     self.time = 90
-    self.level += 1
     self.eaten_pellet = 0
     self.global_timer = 0
     self.state_timer = (0, 0)

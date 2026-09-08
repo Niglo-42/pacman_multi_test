@@ -150,7 +150,7 @@ class Ghost(Entity):
             for d in cardinals:
                 nx, ny = d.add_delta(cx, cy)
                 if 0 <= nx < maze.width and 0 <= ny < maze.height and \
-                        map[ny][nx] <= 2:
+                        map[ny][nx] <= 3:
                     if (nx, ny) not in visited:
                         if (nx, ny) == target:
                             return first_dir

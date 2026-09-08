@@ -112,7 +112,7 @@ class Game:
             if action == "get_input" or action == "won":
                 action = self.menu.get_user_name(
                     self.render.font, self.path, self.player.score,
-                    self.clock, self.fps, (action == "won"))
+                    self.clock, self.fps)
                 self.start_new_game(self.args)
         pygame.quit()
 
@@ -182,9 +182,55 @@ class Game:
             self.clock.tick(self.fps)
 
     def level_is_won(self) -> None:
+        self.level += 1
+        if self.level == 10:
+            self.play_victory()
+            return
         play_intermission(self)
         init_new_level(self)
         if self.role == "host":
             assert self.net is not None
             self.net.send_new_level(self.level, self.last_level_seed)
         pygame.time.wait(500)
+
+    def play_victory(self) -> None:
+        duration_frames = self.fps * 5
+        screen_w, screen_h = Render.screen.get_size()
+        y_pos = screen_h // 2
+        trail = self.render.tile_size * 3
+        pacman_x = -60.0
+        travel = screen_w + trail * (len(self.ghosts) + 1) + 60
+        speed = travel / duration_frames
+        colors = ("#ffd24a", "#ff5bd6", "#5bd0ff", "#5bffb0")
+
+        for frame in range(duration_frames):
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.run = False
+                    return
+                elif event.type == KEYDOWN and event.key == K_ESCAPE:
+                    return
+
+            pacman_x += speed
+
+            Render.screen.fill((0, 0, 0))
+            self.render.putstr("YOU WIN!", self.render.score, 0)
+            self.render.putstr(f"FINAL SCORE  {self.player.score}",
+                               self.render.lvl, 1)
+
+            color = colors[(frame // 6) % len(colors)]
+            banner = self.render.font.render("*  VICTORY  *", False, color)
+            Render.screen.blit(banner, banner.get_rect(
+                center=(screen_w // 2, y_pos - trail)))
+
+            for i, ghost in enumerate(self.ghosts):
+                ghost_tile = ghost.afraid[(frame // 6) % 4]
+                bob = ((frame // 5 + i) % 2) * self.render.scale * 3
+                gx = int(pacman_x) - (i + 1) * trail
+                Render.screen.blit(ghost_tile, (gx, y_pos - bob))
+
+            anim_tile = self.player.tiles[(frame // 6) % 4]
+            Render.screen.blit(anim_tile, (int(pacman_x), y_pos))
+
+            pygame.display.flip()
+            self.clock.tick(self.fps)
