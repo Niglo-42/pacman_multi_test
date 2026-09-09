@@ -71,7 +71,6 @@ class Parser:
             if len(argv) == 0:
                 return Parser.clamp_tuple(params_clamp)
             params, com_lines, islist = Parser.comment(argv[0])
-            print(params, com_lines, islist)
         except Exception as e:
             print(e)
             return Parser.clamp_tuple(params_clamp)
