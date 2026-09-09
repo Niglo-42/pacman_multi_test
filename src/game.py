@@ -117,6 +117,9 @@ class Game:
                     self.start_new_game(self.menu.param_menu(
                         self.args, self.clock, self.fps))
                     action = "start"
+                if action == "instructions":
+                    action = self.menu.instructions(
+                        self.args, self.clock, self.fps)
                 if action == "play":
                     action = self.play()
                 if action == "get_input" or action == "won":

@@ -163,6 +163,45 @@ class Menu:
                     return "start"
             clock.tick(fps)
 
+    def instructions(self, config: dict[str, Any], clock: pygame.time.Clock,
+                     fps: int) -> str:
+        """Show the controls and scoring rules until Escape is pressed."""
+        Render.screen.fill(0)
+        lines = [
+            "Eat every pac-gum to clear the level",
+            "Player 1   -   arrow keys",
+            "Player 2   -   Z  Q  S  D",
+            "Escape   -   pause / back to menu",
+            "Super pac-gum makes the ghosts edible",
+            "pac-gum {}   super {}   ghost {}".format(
+                config.get("points_per_pacgum", 10),
+                config.get("points_per_super_pacgum", 50),
+                config.get("points_per_ghost", 200)),
+            "You start with {} lives".format(config.get("lives", 3)),
+            "Press Escape to return",
+        ]
+        line_spacing = 2
+        n = len(lines)
+        max_char_len = max(len(line) for line in lines)
+        available_height = (Render.screen.get_height() //
+                            (line_spacing * (n + 3)))
+        size = min(available_height,
+                   Render.screen.get_width() // max_char_len)
+        size = max(size, 1)
+        font = pygame.font.Font(FONT_PATH, size)
+        self.render.draw_text("INSTRUCTIONS", font, 0)
+        for i, line in enumerate(lines, 1):
+            self.render.draw_text(line, font, (i + 1) * 2)
+        pygame.display.flip()
+        while True:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    raise GameExit
+                if (event.type == pygame.KEYDOWN
+                        and event.key == pygame.K_ESCAPE):
+                    return "start"
+            clock.tick(fps)
+
     def get_user_name(self, font: pygame.font.Font, path: str, score: int,
                       clock: pygame.time.Clock, fps: int,
                       max_len: int = 10) -> str:
@@ -316,7 +355,7 @@ class Menu:
     def main_menu(self, clock: pygame.time.Clock, fps: int) -> str:
         """Show the main menu; return the chosen action string."""
         Render.screen.fill(0)
-        nb_btn = 4
+        nb_btn = 5
         # button size: keep the source image aspect ratio (248 / 1179)
         size = (int(self.w * 0.2), int(self.w * 0.2 * 248 / 1179))
         btns = [
@@ -331,7 +370,7 @@ class Menu:
             btn.get_rect(center=(pad_w, pad_h + size[1] * i * 2))
             for i, btn in enumerate(btns)
         ]
-        play, param, hg, quit = btns_rect
+        play, param, hg, quit, instructions = btns_rect
         while True:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -347,6 +386,8 @@ class Menu:
                             return "param"
                         elif hg.collidepoint(event.pos):
                             return "score"
+                        elif instructions.collidepoint(event.pos):
+                            return "instructions"
             self.render.hoover_opacity70(btns, btns_rect)
             self.render.draw_obj(btns, btns_rect)
             pygame.display.flip()
