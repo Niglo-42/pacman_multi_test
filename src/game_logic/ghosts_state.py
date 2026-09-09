@@ -1,17 +1,25 @@
+"""Ghost behaviour state machine: SCATTER / CHASE / FRIGHTENED / EYES / Elroy.
+
+The timing tables reproduce the arcade behaviour (frightened duration and
+flash count per level, SCATTER/CHASE phase durations, Cruise Elroy triggers).
+"""
 from __future__ import annotations
-from typing import TYPE_CHECKING
+
 from enum import Enum, auto
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ..game import Game
     from ..entitys.ghosts import Ghost
 
+# Frightened duration in seconds, per level.
 FRIGHT_TIMER = {1: 6, 2: 5, 3: 4, 4: 3, 5: 2, 6: 5, 7: 2, 8: 2, 9: 1,
                 10: 5, 11: 2, 12: 1, 13: 1, 14: 3, 15: 1, 16: 1, 17: 0, 18: 1}
 
+# Number of end-of-frightened flashes, keyed by the first level it applies to.
 FRIGHT_FLASHES = {1: 5, 9: 3, 10: 5, 12: 3, 14: 5, 15: 3, 17: 0, 18: 3, 19: 0}
 
-#  SCATTER / CHASE alternance
+# SCATTER / CHASE phase durations (seconds), per level bracket.
 PHASE_DURATIONS: list[list[float]] = [
     [7, 20, 7, 20, 5, 20, 5],
     [7, 20, 7, 20, 5, 1033, 1 / 60],
@@ -31,6 +39,8 @@ ELROY_TRIGGERS = {1: [20, 10],
 
 
 class GhostState(Enum):
+    """Every state a ghost can be in."""
+
     SCATTER = auto()
     CHASE = auto()
     FRIGHTENED = auto()
@@ -43,16 +53,21 @@ class GhostState(Enum):
 
     @property
     def is_lethal(self) -> bool:
+        """True if a ghost in this state kills the player on contact."""
         return self in (GhostState.CHASE, GhostState.SCATTER,
                         GhostState.ELROY1, GhostState.ELROY2)
 
 
 class GhostStateManager:
+    """Drives the global SCATTER/CHASE/FRIGHTENED cycle and Cruise Elroy."""
+
     def __init__(self) -> None:
+        """Start in SCATTER."""
         self.actual_state: GhostState = GhostState.SCATTER
         self.last_state: GhostState = GhostState.SCATTER
 
     def is_flashing(self, game: Game) -> bool:
+        """True during the blinking tail end of a frightened phase."""
         if self.actual_state is not GhostState.FRIGHTENED:
             return False
         total = game.fps * self.fright_timer(game.level)
@@ -61,19 +76,23 @@ class GhostStateManager:
         return (total - elapsed) <= window
 
     def fright_timer(self, level: int) -> int:
+        """Frightened duration in seconds for *level* (0 past the table)."""
         return FRIGHT_TIMER.get(level, 0)
 
     def fright_flashes(self, level: int) -> int:
+        """Number of end-of-frightened flashes for *level*."""
         key = max(k for k in FRIGHT_FLASHES if k <= level)
         return FRIGHT_FLASHES[key]
 
     @property
     def effective_state(self) -> GhostState:
+        """The SCATTER/CHASE state, ignoring a current FRIGHTENED overlay."""
         if self.actual_state == GhostState.FRIGHTENED:
             return self.last_state
         return self.actual_state
 
     def get_frightened(self, game: Game) -> None:
+        """Put every non-eyes ghost into FRIGHTENED (super pac-gum eaten)."""
         game.frightened_timer = game.global_timer
         self.actual_state = GhostState.FRIGHTENED
         for ghost in game.ghosts:
@@ -81,6 +100,7 @@ class GhostStateManager:
                 self.modify_ghost_state(GhostState.FRIGHTENED, ghost)
 
     def update_ghosts_state(self, game: Game) -> None:
+        """Per-frame update of the global cycle and every ghost's state."""
         for ghost in game.ghosts:
             if ghost.alive and ghost.state == GhostState.EYES:
                 ghost.state = self.effective_state
@@ -93,6 +113,7 @@ class GhostStateManager:
             self.switch_states(game)
 
     def modify_ghost_state(self, new_state: GhostState, ghost: Ghost) -> None:
+        """Change a ghost's state, forcing a U-turn when it becomes lethal."""
         if ghost.alive and new_state != ghost.state:
             ghost.state = new_state
             if ghost.state != GhostState.EYES and \
@@ -100,6 +121,7 @@ class GhostStateManager:
                 ghost.changing_side = True
 
     def manage_end_fright(self, game: Game) -> None:
+        """End the frightened phase once its timer has elapsed."""
         if (game.global_timer - game.frightened_timer) >= \
                 (game.fps * self.fright_timer(game.level)):
             game.point_per_ghost = game.args.get("points_per_ghost", 100)
@@ -109,6 +131,7 @@ class GhostStateManager:
             self.actual_state = self.last_state
 
     def switch_states(self, game: Game) -> None:
+        """Advance the SCATTER/CHASE cycle from the phase-duration table."""
         states = [GhostState.SCATTER, GhostState.CHASE]
         acc_state, state_timer = game.state_timer
         levels = {1: 0, 2: 1, 5: 2}
@@ -137,6 +160,7 @@ class GhostStateManager:
             self.actual_state = GhostState.CHASE
 
     def elroy_mode(self, game: Game) -> None:
+        """Promote Blinky to Cruise Elroy 1/2 as the pac-gums run low."""
         boolean, timer = game.elroy_cooldown
         diff = game.global_timer - timer
         if diff <= ELROY_COOLDOWN * game.fps:

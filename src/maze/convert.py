@@ -1,9 +1,16 @@
+"""Expand the generator's connectivity grid into a drawable tile map.
+
+Each connectivity cell (0..15) becomes a 3x3 block of tile ids, resolving
+wall corners and junctions with the neighbouring cells.
+"""
 from ..game_logic.direction import Dir
 from .maze import Maze
 
 
 class Convert:
-    # - 16 = external walls
+    """Namespace of the cell-to-tiles lookup tables and helpers."""
+
+    # tile ids >= 16 are outer-border walls
     match_int = (
         ((1, 1, 1), (1, 1, 1), (1, 1, 1)),
         ((24, 24, 24), (1, 1, 1), (1, 1, 1)),  # N
@@ -45,7 +52,10 @@ class Convert:
 
     @staticmethod
     def get_trad(cardinal: int, val: int) -> list[list[int]]:
+        """Return the 3x3 tile block for one cell (``val``), given which of
+        its sides border the outer wall (``cardinal`` bitmask)."""
         def is_only_one_wall(cardinal: int) -> bool:
+            """True if exactly one bit is set."""
             return cardinal != 0 and not cardinal & (cardinal - 1)
         res = [list(row) for row in Convert.match_int[val]]
         if cardinal == 0:
@@ -91,6 +101,7 @@ class Convert:
     def modify_corner(grid: list[list[list[list[int]]]],
                       corner: list[tuple[int, int, int, int]],
                       row: int, col: int) -> list[list[list[list[int]]]]:
+        """Patch the tiles where four cells meet so wall corners line up."""
         for y in range(row):
             for x in range(col):
                 current = corner[y * col + x]
@@ -107,10 +118,13 @@ class Convert:
 
     @staticmethod
     def cell2tiles(maze: Maze) -> list[list[int]]:
+        """Turn ``maze.grid`` into a tile map three times larger each way."""
         def isnot_last_row_or_col(x: int, y: int, w: int, h: int) -> bool:
+            """True unless ``(x, y)`` is on the bottom or right edge."""
             return x < w - 1 and y < h - 1
 
         def get_external_walls(x: int, y: int, w: int, h: int) -> int:
+            """Bitmask of which sides of cell ``(x, y)`` touch the border."""
             res = 0
             if (y == 0):
                 res |= 1
@@ -138,6 +152,7 @@ class Convert:
     @staticmethod
     def flat(tiles: list[list[list[list[int]]]], w: int,
              h: int) -> list[list[int]]:
+        """Flatten the grid of 3x3 blocks into a plain row-major tile map."""
         row = []
         for y in range(h):
             for one_third in range(3):
@@ -149,6 +164,7 @@ class Convert:
 
     @staticmethod
     def get_corner(maze: Maze, y: int, x: int) -> int:
+        """Bitmask of which walls meet at the corner shared by four cells."""
         res = 0
         current = maze.grid[y][x]
         right = maze.grid[y][x + 1]

@@ -1,13 +1,22 @@
+"""Entry point.
+
+Usage:
+    python3 pac-man.py config.json
+
+Parses the configuration, optionally sets up a LAN game through a small
+console prompt, then hands control to :class:`src.game.Game`.
+"""
+import os
+import sys
 from typing import Any
+
 from config.parser_config import Parser, print_obj
 from src.game import Game
 from src.network.netcode import NetHost, NetGuest, can_reach_host
-import os
-import sys
 
 
 def _bootstrap_frozen() -> None:
-    """PyInstaller bundle setup.
+    """PyInstaller bundle setup (no-op when running from source).
 
     Assets are loaded through paths relative to the working directory, so we
     chdir() into the bundle where they were shipped. A windowed build has no
@@ -27,90 +36,61 @@ _bootstrap_frozen()
 
 
 def setup_network(args: dict[str, Any]) -> dict[str, Any]:
-    """Petit prompt console (même esprit que serveur/lan_client.py) pour
-    choisir solo / hôte / invité avant de lancer la fenêtre pygame.
-    À terme, ce choix peut migrer dans le menu graphique (menu.py) en
-    stockant simplement les mêmes clés dans `args`."""
-    # Pas de console interactive (build packagé sans terminal, ou stdin
-    # redirigé) : on saute le prompt et on lance une partie solo classique.
+    """Ask (on the console) for solo / host / guest before opening the window.
+
+    The choice only adds keys to *args*; it could later move into the
+    graphical menu without touching the rest of the game.
+    """
+    # No interactive console (packaged windowed build, or piped stdin):
+    # skip the prompt and start a normal solo game.
     if sys.stdin is None or not sys.stdin.isatty():
         args["role"] = "solo"
         return args
-    print("Mode de jeu : [1] Solo/local  [2] Héberger (LAN)  "
-          "[3] Rejoindre (LAN) [4] Multi/scinder Rejoindre [5] Host")
+    print("Game mode: [1] Solo/local  [2] Host (LAN)  "
+          "[3] Join (LAN)  [4] Join + split-screen  [5] Host + split-screen")
     choice = input("> ").strip()
     net: NetHost | NetGuest
 
-    if choice == "2":
+    if choice in ("2", "5"):
         args["role"] = "host"
         args["nb_player"] = 2
         net = NetHost()
-        print("En attente d'un invité (Ctrl+C pour annuler)...")
+        print("Waiting for a guest (Ctrl+C to cancel)...")
         if not net.wait_for_guest(args, args.get("seed", 1)):
-            print("Personne ne s'est connecté, retour en solo.")
+            print("Nobody connected, falling back to solo.")
             args["role"] = "solo"
         else:
             args["net"] = net
-            print(f"Invité connecté depuis {net.guest_addr}.")
+            print(f"Guest connected from {net.guest_addr}.")
+            args["scinder"] = choice == "5"
 
-    elif choice == "3":
-        host_ip = input("IP de l'hôte : ").strip()
+    elif choice in ("3", "4"):
+        host_ip = input("Host IP: ").strip()
         if not can_reach_host(host_ip):
-            print("Impossible de joindre l'hôte en direct — sur le "
-                  "réseau des VMs 42, ça peut être normal si les postes "
-                  "sont isolés entre eux. Vérifiez que vous êtes sur le "
-                  "même réseau / testez `nc -u` entre les deux, ou "
-                  "repassez par un relai (cf. serveur/phone_server.py).")
+            print("Cannot reach the host directly. On the 42 VM network this "
+                  "can be normal if the machines are isolated from each "
+                  "other. Check you are on the same network / test with "
+                  "`nc -u`, then retry.")
             return args
         net = NetGuest(host_ip)
-        print("Connexion à l'hôte...")
+        print("Connecting to the host...")
         if net.say_hello_and_wait_init() is None:
-            print("Pas de réponse de l'hôte, retour en solo.")
+            print("No answer from the host, falling back to solo.")
         else:
             args["role"] = "guest"
             args["net"] = net
-    elif choice == "4":
-        host_ip = input("IP de l'hôte : ").strip()
-        if not can_reach_host(host_ip):
-            print("Impossible de joindre l'hôte en direct — sur le "
-                  "réseau des VMs 42, ça peut être normal si les postes "
-                  "sont isolés entre eux. Vérifiez que vous êtes sur le "
-                  "même réseau / testez `nc -u` entre les deux, ou "
-                  "repassez par un relai (cf. serveur/phone_server.py).")
-            return args
-        net = NetGuest(host_ip)
-        print("Connexion à l'hôte...")
-        if net.say_hello_and_wait_init() is None:
-            print("Pas de réponse de l'hôte, retour en solo.")
-        else:
-            args["role"] = "guest"
-            args["net"] = net
-            args["scinder"] = True
-    elif choice == "5":
-        args["role"] = "host"
-        args["nb_player"] = 2
-        net = NetHost()
-        print("En attente d'un invité (Ctrl+C pour annuler)...")
-        if not net.wait_for_guest(args, args.get("seed", 1)):
-            print("Personne ne s'est connecté, retour en solo.")
-            args["role"] = "solo"
-        else:
-            args["net"] = net
-            print(f"Invité connecté depuis {net.guest_addr}.")
-            args["scinder"] = True
+            args["scinder"] = choice == "4"
 
     return args
 
 
 def main(argv: list[str]) -> int:
-    try:
-        args = Parser.parse_config(argv)
-        print_obj(args)
-    except ValueError as e:
-        print(e)
+    """Parse the config, wire the network, and run the game."""
+    args = Parser.parse_config(argv)
+    print_obj(args)
     if getattr(sys, "frozen", False):
-        # keep the highscore file next to the executable (writable, and
-        # not wiped when the bundle is replaced on the next update)
+        # Keep the highscore file next to the executable: a writable spot
+        # that is not wiped when the bundle is replaced on the next update.
         args["highscore_filename"] = os.path.join(
             os.path.dirname(sys.executable), "highscore.json")
     args = setup_network(args)

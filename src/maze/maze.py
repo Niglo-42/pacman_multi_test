@@ -1,31 +1,36 @@
-import mazegenerator
-import random
+"""Maze wrapper around the external A-Maze-ing (`mazegenerator`) package.
+
+The generator returns a connectivity grid: each cell is a corridor whose
+0..15 value encodes, bit by bit, which of its neighbours it connects to
+(walls sit on the edges between cells). :func:`src.maze.convert.Convert`
+then expands each cell into a 3x3 block of drawable tiles.
+
+Public coordinates are ``(col, row)`` -- x then y.
+"""
 import math
-from ..game_logic.direction import Dir
+import random
+
+import mazegenerator
 from pygame import Surface
+
+from ..game_logic.direction import Dir
 
 
 class MazeGenError(Exception):
-    pass
+    """Raised when the external maze generator fails or returns junk."""
 
 
 class Maze:
-    """Labyrinthe sous forme de grille de connectivité.
+    """A generated maze plus its pac-gum / super-gum / fruit placement."""
 
-        Chaque cellule est un couloir ; sa valeur (0-15) code par bits les
-        passages ouverts vers ses voisins. Les murs sont donc sur les arêtes.
-
-        Convention : les coordonnées publiques sont (col, row) — x puis y.
-        L'indexation interne `cells[row][col]` ne sort jamais de cette classe.
-        """
     def __init__(self, width: int, height: int, seed: int) -> None:
+        """Generate the connectivity grid for a ``width`` x ``height`` maze."""
         self.height = height
         self.width = width
         self.seed = seed
-        # RNG dédié (et non le random global) pour que deux instances
-        # construites avec le même seed produisent EXACTEMENT le même
-        # placement de super pac-gums/fruits — indispensable pour que
-        # l'hôte et l'invité affichent un labyrinthe identique en LAN.
+        # A dedicated RNG (not the global one) so two mazes built with the
+        # same seed place super pac-gums and fruits identically -- needed for
+        # the host and guest to show the same maze in LAN games.
         self.rng = random.Random(seed)
         self.grid = self.maze_loader()
         self.map: list[list[int]] | None = None
@@ -36,6 +41,7 @@ class Maze:
 
     def get_first_zero(self, pacman_x: int,
                        pacman_y: int) -> tuple[int, int]:
+        """Return the first empty corridor tile that is not the '42' glyph."""
         assert self.map is not None
         for y, row in enumerate(self.map):
             for x, col in enumerate(row):
@@ -48,6 +54,7 @@ class Maze:
 
     def add_fruit(self, pacman_pos: tuple[int, int], tile_size: int,
                   value: int) -> Surface:
+        """Drop a bonus fruit on a free tile and return its sprite."""
         assert self.map is not None
         assert self.surf is not None
         assert self.fruit_tiles is not None
@@ -59,10 +66,7 @@ class Maze:
         return self.fruit_tiles[fruit_idx]
 
     def add_super_gum(self) -> None:
-        """
-        replace 3 % of the pellets to superGum
-        position = left or right
-        """
+        """Place one super pac-gum in each of the four corner regions."""
         assert self.map is not None
         y_bottom = self.height * 95 // 100
         y_top = self.height * 5 // 100
@@ -83,6 +87,7 @@ class Maze:
 
     def is_open(self, position: tuple[int, int],
                 direction: Dir) -> bool:
+        """True if the next tile in *direction* from *position* is walkable."""
         assert self.map is not None
         col, row = position
         d_x, d_y = direction.delta
@@ -90,6 +95,7 @@ class Maze:
         return cell <= 3
 
     def maze_loader(self) -> list[list[int]]:
+        """Call the external generator (``perfect=False``); return its grid."""
         try:
             maze_gen = mazegenerator.MazeGenerator(
                 size=(self.width, self.height),
@@ -99,9 +105,10 @@ class Maze:
             return maze_grid
 
         except Exception as e:
-            raise MazeGenError(f"Error occured while loading the maze: {e}")
+            raise MazeGenError(f"error while loading the maze: {e}")
 
     def is_in42(self, y: int, x: int) -> bool:
+        """True if ``(x, y)`` is the centre of the generator's '42' glyph."""
         assert self.map is not None
         if self.map[y - 1][x] != 24:
             return False
@@ -114,13 +121,17 @@ class Maze:
         return True
 
     def kills_caves(self) -> None:
+        """Fill in the small enclosed pockets the 3x3 expansion can leave,
+        so the corridor graph stays fully connected."""
         game_map = self.map
         assert game_map is not None
 
         def is_pow_2(cardinal: int) -> bool:
+            """True if exactly one bit is set."""
             return cardinal != 0 and not (cardinal & cardinal - 1)
 
         def is_four_pellets(y: int, x: int) -> bool:
+            """True if all four neighbours of ``(x, y)`` are walkable."""
             if game_map[y - 1][x] > 2:
                 return False
             if game_map[y][x + 1] > 2:
@@ -204,13 +215,13 @@ class Maze:
             else:
                 if is_pow_2(~cardinal & 0xf):
                     cardinal = ~cardinal & 0xf
-                    if cardinal & 1:  # nord
+                    if cardinal & 1:  # north
                         game_map[y][x] = 24
-                    elif cardinal & 2:  # est
+                    elif cardinal & 2:  # east
                         game_map[y][x] = 25
-                    elif cardinal & 4:  # sud
+                    elif cardinal & 4:  # south
                         game_map[y][x] = 26
-                    elif cardinal & 8:  # ouest
+                    elif cardinal & 8:  # west
                         game_map[y][x] = 27
                 else:
                     if cardinal & 6 == 6:  # NW
@@ -224,6 +235,7 @@ class Maze:
                 # 20 if corner, # 24 if junction
 
     def get_spawn(self) -> tuple[int, int]:
+        """BFS from the maze centre for the player's first walkable tile."""
         assert self.map is not None
         mid_x, mid_y = self.width // 2, self.height // 2
         if mid_x == 0 and mid_y == 0:
@@ -243,11 +255,13 @@ class Maze:
         raise MazeGenError("No spawn tile found in maze")
 
     def get_ghosts_spawns(self) -> list[tuple[int, int]]:
+        """The four maze corners, one starting tile per ghost."""
         w, h = self.width, self.height
         corners = [(1, 1), (w - 2, 1), (1, h - 2), (w - 2, h - 2)]
         return corners
 
     def get_opposite_corner(self, pos: tuple[int, int]) -> tuple[int, int]:
+        """The corner farthest from *pos* (where an eaten ghost heads)."""
         best_dist = -1.0
         further_corner = pos
         for corner in self.get_ghosts_spawns():

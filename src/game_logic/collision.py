@@ -1,7 +1,10 @@
+"""Player <-> ghost collision detection and its consequences."""
 from __future__ import annotations
-from typing import TYPE_CHECKING
-from .ghosts_state import GhostState
+
 import math
+from typing import TYPE_CHECKING
+
+from .ghosts_state import GhostState
 
 if TYPE_CHECKING:
     from ..entitys.ghosts import Ghost
@@ -10,6 +13,12 @@ if TYPE_CHECKING:
 
 
 def check_collision(game: Game, player: Player, ghosts: list[Ghost]) -> None:
+    """Resolve contact between *player* and each ghost.
+
+    A lethal ghost costs a life (unless cheat mode is on); a frightened ghost
+    is eaten -- it turns to eyes, heads home, and scores an amount that
+    doubles for each ghost eaten within the same frightened phase.
+    """
     for ghost in ghosts:
         if ghost.state == GhostState.EYES:
             continue
@@ -27,6 +36,7 @@ def check_collision(game: Game, player: Player, ghosts: list[Ghost]) -> None:
 
 
 def offset_detection(game: Game, ghost: Ghost, player: Player) -> bool:
+    """True if the pixel distance between the two is within the hitbox."""
     center_tile_size = game.render.half_size
     hitbox = center_tile_size * 0.7
     px, py = player.position
@@ -44,6 +54,7 @@ def offset_detection(game: Game, ghost: Ghost, player: Player) -> bool:
 
 
 def swept_check_detection(ghost: Ghost, player: Player) -> bool:
+    """True if ghost and player swapped tiles in one frame (head-on pass)."""
     if ghost.position == player.last_pos and ghost.last_pos == player.position:
         return True
     return False

@@ -1,23 +1,34 @@
-from __future__ import annotations
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from ..game import Game
+"""The ghosts: a shared base class plus Blinky, Pinky, Inky and Clyde.
 
+Each ghost chooses, at every tile, the open neighbour (never reversing)
+closest to a personal *target tile*, with a 1-in-6 random deviation to break
+movement loops. The target depends on the ghost and its current state.
+"""
+from __future__ import annotations
+
+import math
+import random
+from collections import deque
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+import numpy as np
+import pygame
+
 from ..entitys.entity import Entity
 from ..entitys.player import Player
 from ..game_logic.direction import Dir
 from ..game_logic.ghosts_state import GhostState
 from ..maze.maze import Maze
-from collections import deque
-import numpy as np
-import pygame
-import random
-import math
+
+if TYPE_CHECKING:
+    from ..game import Game
 
 
 @dataclass
 class Ghost(Entity):
+    """Common movement, targeting and animation for the four ghosts."""
+
     state: GhostState = GhostState.SCATTER
     spawn: tuple[int, int] = (0, 0)
     target: tuple[int, int] = (0, 0)
@@ -30,6 +41,7 @@ class Ghost(Entity):
 
     @staticmethod
     def _load_tiles(start: int, end: int, size: int) -> list[pygame.Surface]:
+        """Load and scale sprite files ``start..end`` to 2x tile size."""
         return [
             pygame.transform.scale(
                 pygame.image.load(f"images/sprites/"
@@ -40,20 +52,24 @@ class Ghost(Entity):
 
     @classmethod
     def load_common_tiles(cls, size: int) -> None:
+        """Load the frightened and eyes sprites shared by every ghost."""
         cls._afraid = cls._load_tiles(49, 53, size)
         cls._eyes = cls._load_tiles(61, 65, size)
 
     @property
     def afraid(self) -> list[pygame.Surface]:
+        """The frightened-mode sprite frames."""
         assert Ghost._afraid is not None
         return Ghost._afraid
 
     @property
     def eyes(self) -> list[pygame.Surface]:
+        """The eyes-only sprite frames (used after being eaten)."""
         assert Ghost._eyes is not None
         return Ghost._eyes
 
     def update(self, game: Game, is_flashing: bool) -> None:
+        """Advance the ghost by one frame: pick a direction, move, animate."""
         if self.state == GhostState.EYES and self.position == self.target:
             self.alive = True
         if self.offset_xy == (0, 0):
@@ -72,6 +88,8 @@ class Ghost(Entity):
             self.update_tile()
 
     def update_dir(self, target: tuple[int, int], maze: Maze) -> Dir:
+        """Choose the next direction: the open non-reversing move closest to
+        *target*, or a random one 1 time in 6. Eyes use a BFS back home."""
         if self.state == GhostState.EYES:
             self.direction = self.eyed_bfs(maze)
             return self.direction
@@ -82,7 +100,7 @@ class Ghost(Entity):
             self.direction = self.direction.opposite
             return self.direction
 
-        #  add randomness to the choices to avoid loops
+        # add randomness to the choices to avoid movement loops
         rnd, direction = self.add_randomness(candidates)
         if rnd is True:
             self.direction = direction
@@ -102,6 +120,7 @@ class Ghost(Entity):
         return self.direction
 
     def add_randomness(self, candidates: list[Dir]) -> tuple[bool, Dir]:
+        """1 time in 6 pick a random candidate; return ``(picked?, dir)``."""
         dice = random.randint(1, 6)
         if dice == 6:
             direction = random.randint(0, len(candidates) - 1)
@@ -109,6 +128,7 @@ class Ghost(Entity):
         return (False, Dir.X)
 
     def get_target(self, player: Player, maze: Maze) -> tuple[int, int]:
+        """Target tile for the non-chase states (chase is per-ghost)."""
         if self.state == GhostState.SCATTER:
             return self.spawn
         elif self.state == GhostState.EYES:
@@ -119,12 +139,14 @@ class Ghost(Entity):
 
     def frightened_pos(self, ghost_pos: tuple[int, int],
                        player_pos: tuple[int, int]) -> tuple[int, int]:
+        """A tile straight away from the player, so the ghost flees."""
         diff_x = ghost_pos[0] - player_pos[0]
         diff_y = ghost_pos[1] - player_pos[1]
         target = (ghost_pos[0] + diff_x, ghost_pos[1] + diff_y)
         return target
 
     def eyed_bfs(self, maze: Maze) -> Dir:
+        """Return the first step of the shortest path to ``self.target``."""
         map = maze.map
         assert map is not None
         start = self.position
@@ -161,7 +183,10 @@ class Ghost(Entity):
 
 
 class Blinky(Ghost):
+    """Red ghost: chases the player directly; speeds up as Cruise Elroy."""
+
     def __init__(self, spawn: tuple[int, int], size: int) -> None:
+        """Spawn at *spawn* and load Blinky's sprites."""
         super().__init__()
         self.name = "Blinky"
         self.spawn = spawn
@@ -185,6 +210,7 @@ class Blinky(Ghost):
                  size * 2)) for i in range(41, 49, 1)]
 
     def get_target(self, player: Player, maze: Maze) -> tuple[int, int]:
+        """Chase / Elroy: the player's own tile."""
         if self.state == GhostState.CHASE or self.state == GhostState.ELROY1 \
                 or self.state == GhostState.ELROY2:
             return player.position
@@ -192,7 +218,10 @@ class Blinky(Ghost):
 
 
 class Pinky(Ghost):
+    """Pink ghost: aims four tiles ahead of the player to cut them off."""
+
     def __init__(self, spawn: tuple[int, int], size: int) -> None:
+        """Spawn at *spawn* and load Pinky's sprites."""
         super().__init__()
         self.name = "Pinky"
         self.spawn = spawn
@@ -213,13 +242,18 @@ class Pinky(Ghost):
                         size * 2, size * 2)) for i in range(53, 61, 1)]
 
     def get_target(self, player: Player, maze: Maze) -> tuple[int, int]:
+        """Chase: four tiles ahead of the player."""
         if self.state == GhostState.CHASE:
             return player.direction.add_delta_speed(player.position, 4)
         return super().get_target(player, maze)
 
 
 class Inky(Ghost):
+    """Cyan ghost: targets Blinky's position mirrored through a point
+    two tiles ahead of the player -- the least predictable of the four."""
+
     def __init__(self, spawn: tuple[int, int], size: int) -> None:
+        """Spawn at *spawn* and load Inky's sprites."""
         super().__init__()
         self.name = "Inky"
         self.spawn = spawn
@@ -242,6 +276,7 @@ class Inky(Ghost):
                  size * 2)) for i in range(65, 73, 1)]
 
     def get_target(self, player: Player, maze: Maze) -> tuple[int, int]:
+        """Chase: Blinky mirrored through a point 2 tiles ahead of player."""
         if self.state == GhostState.CHASE:
             assert self.blinky is not None
             player_x, player_y = player.position
@@ -254,7 +289,10 @@ class Inky(Ghost):
 
 
 class Clyde(Ghost):
+    """Orange ghost: chases the player but flees home within eight tiles."""
+
     def __init__(self, spawn: tuple[int, int], size: int) -> None:
+        """Spawn at *spawn* and load Clyde's sprites."""
         super().__init__()
         self.name = "Clyde"
         self.spawn = spawn
@@ -276,6 +314,7 @@ class Clyde(Ghost):
                  size * 2)) for i in range(78, 86, 1)]
 
     def get_target(self, player: Player, maze: Maze) -> tuple[int, int]:
+        """Chase: the player's tile, or home when closer than 8 tiles."""
         if self.state == GhostState.CHASE:
             dist = math.dist(self.position, player.position)
             if dist < 8:

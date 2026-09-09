@@ -19,8 +19,12 @@ dev = [
     "pytest>=9.1.1",
 ]
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
 [tool.mypy]
-exclude = ['\.venv', '^build/', '^dist/']
+exclude = ['\.venv', '^build/', '^dist/', '^tests/']
 plugins = ['pydantic.mypy']
 
 [[tool.mypy.overrides]]

@@ -1,18 +1,24 @@
+"""The player entity: keyboard input and buffered turns."""
 from dataclasses import dataclass
-from ..entitys.entity import Entity
-from ..maze.maze import Maze
-from ..game_logic.direction import Dir
+
 import pygame
+
+from ..entitys.entity import Entity
+from ..game_logic.direction import Dir
+from ..maze.maze import Maze
 
 
 @dataclass
 class Player(Entity):
+    """Pac-Man. Player 0 uses the arrow keys, player 1 uses Z/Q/S/D."""
+
     desired_direction: Dir = Dir.X
     total_pellet: int = 0
     score: int = 0
     lives: int = 0
 
     def _input(self) -> None:
+        """Read the keyboard and store the direction the player wants next."""
         keys = pygame.key.get_pressed()
         if self.id == 0:
             if keys[pygame.K_UP]:
@@ -34,15 +40,16 @@ class Player(Entity):
                 self.desired_direction = Dir.W
 
     def update_desire(self, maze: Maze) -> None:
+        """Turn to ``desired_direction`` as soon as that way is open."""
         if self.offset_xy != (0, 0):
             return
         if self.direction == self.desired_direction:
             return
         if maze.is_open(self.position, self.desired_direction):
             self.direction = self.desired_direction
-            self.dir_anim = self.direction.get_idx
 
     def update(self, maze: Maze) -> None:
+        """Advance the player by one frame: input, turn, move, animate."""
         self._input()
         self.update_desire(maze)
         self.update_position(maze)

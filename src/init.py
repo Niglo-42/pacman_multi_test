@@ -1,7 +1,10 @@
+"""Factory helpers that (re)build the maze, the player and the ghosts."""
 from __future__ import annotations
-from typing import TYPE_CHECKING
-import pygame
+
 import random
+from typing import TYPE_CHECKING
+
+import pygame
 
 if TYPE_CHECKING:
     from .game import Game
@@ -10,30 +13,22 @@ if TYPE_CHECKING:
     from .maze.maze import Maze
 
 
-def init_audio(self: Game) -> None:
-    self.audio_enabled = False
-    # la suite fonctionnera que sur les imac pas sur mon intel #snif
-    # try:
-    #     pygame.mixer.init()
-    #     self.audio_enabled = True
-    # except pygame.error:
-    #     self.audio_enabled = False
-
-
 def init_ghosts(self: Game) -> list[Ghost]:
-    from .entitys.ghosts import Ghost, Blinky, Pinky, Inky, Clyde
+    """Create Blinky, Pinky, Inky and Clyde, one per maze corner."""
+    from .entitys.ghosts import Blinky, Pinky, Inky, Clyde, Ghost
     Ghost.load_common_tiles(self.render.tile_size)
     ghost_classes = [Blinky, Pinky, Inky, Clyde]
     ghost_spawns = self.maze.get_ghosts_spawns()
     ghosts = [cls(spawn, self.render.tile_size) for cls, spawn in
               zip(ghost_classes, ghost_spawns)]
-    ghosts[2].blinky = ghosts[0]
+    ghosts[2].blinky = ghosts[0]  # Inky targets relative to Blinky
     return ghosts
 
 
 def init_maze(self: Game, width: int, height: int, seed: int) -> Maze:
-    from .maze.maze import Maze
+    """Generate a maze, expand it to tiles, and place gums and super-gums."""
     from .maze.convert import Convert
+    from .maze.maze import Maze
     maze = Maze(width=width, height=height, seed=seed)
     maze.map = Convert.cell2tiles(maze)
     maze.height *= 3
@@ -46,16 +41,17 @@ def init_maze(self: Game, width: int, height: int, seed: int) -> Maze:
 
 
 def init_player(self: Game, id: int, lives: int) -> Player:
+    """Create a player entity spawned at the maze centre."""
     from .entitys.player import Player
     spawn = self.maze.get_spawn()
     player = Player(
         id=id, name=str(id), idx_anim=0,
         lives=lives,
         anim=[
-                [23, 24, 2, 24],    # n
-                [0, 1, 2, 1],  # e
-                [31, 32, 2, 32],  # s
-                [14, 15, 2, 15]  # w
+                [23, 24, 2, 24],    # north
+                [0, 1, 2, 1],       # east
+                [31, 32, 2, 32],    # south
+                [14, 15, 2, 15]     # west
             ],
         spawn=spawn,
         position=spawn,
@@ -72,10 +68,17 @@ def init_player(self: Game, id: int, lives: int) -> Player:
 
 
 def init_new_level(self: Game, seed: int | None = None) -> None:
+    """Reset timers and rebuild the maze/entities for the next level.
+
+    Score and remaining lives are carried over. In LAN games the host picks
+    *seed* and forwards it so both sides regenerate an identical maze;
+    otherwise a random seed is drawn.
+    """
     from .game_logic.ghosts_state import GhostState
     from .interface.render import Render
     saved_lives = self.player.lives
     self.time = 90
+    self.pending_ready = True  # countdown before this level starts
     self.eaten_pellet = 0
     self.global_timer = 0
     self.state_timer = (0, 0)
@@ -83,9 +86,6 @@ def init_new_level(self: Game, seed: int | None = None) -> None:
     self.elroy_cooldown = (False, 0)
     self.ghost_state = GhostState.SCATTER
 
-    # en LAN, l'hôte choisit le seed et le transmet à l'invité (via le
-    # paquet réseau "new_level") pour que les deux régénèrent le même
-    # labyrinthe ; en solo/host on tire un seed aléatoire comme avant.
     if seed is None:
         seed = random.randint(0, 256)
     self.last_level_seed = seed
@@ -96,9 +96,7 @@ def init_new_level(self: Game, seed: int | None = None) -> None:
     self.player = init_player(self, 0, saved_lives)
     self.player.score = score
     if self.player2:
-        # préexistant : player2 n'était pas réinitialisé au changement
-        # de niveau (bug indépendant du LAN) ; on le fait maintenant
-        # pour que le mode 2 joueurs (local ou LAN) reste cohérent.
+        # Keep the second player consistent across levels too.
         saved_lives2 = self.player2.lives
         score2 = self.player2.score
         self.player2 = init_player(self, 1, saved_lives2)

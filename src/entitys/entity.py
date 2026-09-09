@@ -1,12 +1,21 @@
+"""Base class for the maze-moving entities (Pac-Man and the ghosts)."""
 from dataclasses import dataclass, field
-from ..game_logic.direction import Dir
+
 from pygame import Rect, Surface
-from ..maze.maze import Maze
+
+from ..game_logic.direction import Dir
 from ..game_logic.speed import BASE_SPEED
+from ..maze.maze import Maze
 
 
 @dataclass
 class Entity:
+    """Position, movement and animation shared by the player and the ghosts.
+
+    Movement is tile-based with a sub-tile pixel ``offset_xy``; when the
+    offset reaches one tile (8 base units) the entity snaps to the next cell.
+    """
+
     direction: Dir = Dir.X
     id: int = 0
     accumulator: float = 0.0
@@ -24,6 +33,7 @@ class Entity:
     name: str = ""
 
     def update_position(self, maze: Maze) -> None:
+        """Advance one frame along ``direction`` if the way is open."""
         if not maze.is_open(self.position, self.direction):
             return
         x, y = self.position
@@ -46,6 +56,7 @@ class Entity:
 
     def update_ghost_tile(self, ghost_afraid: list[Surface], eyes: bool,
                           afraid_end: bool) -> None:
+        """Pick the next frightened/eyes sprite frame for a ghost."""
         surf = self.surf
         assert surf is not None
         surf.fill(0)
@@ -57,25 +68,30 @@ class Entity:
         self.idx_anim += 1
         self.idx_anim &= 0xf
 
-    def update_tile(self, dir=Dir.X) -> None:
+    def update_tile(self, facing: Dir = Dir.X) -> None:
+        """Advance the walk animation.
+
+        With the default ``facing`` the entity's own ``direction`` is used;
+        pass an explicit direction to force a frame (used by intermissions).
+        """
         surf = self.surf
         assert surf is not None
         surf.fill(0)
-        if dir == dir.X:
+        if facing == Dir.X:
             surf.blit(
-                self.tiles[self.anim[self.direction.value[3]][self.idx_anim >> 2]],
+                self.tiles[self.anim[self.direction.value[3]]
+                           [self.idx_anim >> 2]],
                 (0, 0))
         else:
             surf.blit(
-                self.tiles[self.anim[dir.value[3]][self.idx_anim >> 2]],
+                self.tiles[self.anim[facing.value[3]][self.idx_anim >> 2]],
                 (0, 0))
         self.idx_anim += 1
         self.idx_anim &= 0xf
 
     def tile_death(self, nb_frames: int, tile_of_anim_nb: int,
-                   idx: int) -> None:  # 4-13
-        # for 60 fps, time_in_frame = 240, anim = 10 tiles
-        # so we need 24 frames of the same tile before changing
+                   idx: int) -> None:
+        """Show frame *idx* of the death animation (sprites 4..13)."""
         frame_per_tile = nb_frames // tile_of_anim_nb
         surf = self.surf
         assert surf is not None

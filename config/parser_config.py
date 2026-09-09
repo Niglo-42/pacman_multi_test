@@ -1,108 +1,145 @@
-from io import TextIOWrapper
+"""Configuration file loading and validation.
+
+The game is launched with a single argument: the path to a JSON configuration
+file.  On top of standard JSON the loader also accepts comments (``#`` and
+``//`` line comments, ``/* ... */`` blocks) and trailing commas.
+
+Every problem -- unreadable file, malformed JSON, wrong type, out-of-range
+number, unknown key -- is reported on stdout and replaced by a safe default.
+The game never crashes because of the configuration.
+"""
+from __future__ import annotations
+
 import json
-import ast
+import re
 from typing import Any
+
+# Integer keys: name -> (minimum, maximum, default).
+_INT_RANGES: dict[str, tuple[int, int, int]] = {
+    "width": (6, 33, 8),
+    "height": (6, 33, 7),
+    "lives": (1, 3, 3),
+    "seed": (0, 0xFFFF, 42),
+    "points_per_pacgum": (1, 100, 10),
+    "points_per_super_pacgum": (1, 500, 50),
+    "points_per_ghost": (1, 1600, 200),
+    "fps": (30, 60, 60),
+    "nb_player": (1, 2, 1),
+}
+# Boolean keys: name -> default.
+_BOOL_KEYS: dict[str, bool] = {
+    "cheat_mode": False,
+    "audio_enable": False,
+}
+# String keys: name -> default.
+_STR_KEYS: dict[str, str] = {
+    "highscore_filename": "highscore.json",
+}
+
+# Matches a full string literal (kept as-is) OR a comment (captured, stripped).
+_COMMENT_RE = re.compile(
+    r'"(?:[^"\\]|\\.)*"'
+    r'|(/\*.*?\*/|//[^\n]*|#[^\n]*)',
+    re.DOTALL,
+)
+_TRAILING_COMMA_RE = re.compile(r",(\s*[}\]])")
+
+
+def defaults() -> dict[str, Any]:
+    """Return a fresh dict with every configuration key at its default."""
+    cfg: dict[str, Any] = dict(_STR_KEYS)
+    cfg.update({key: rng[2] for key, rng in _INT_RANGES.items()})
+    cfg.update(_BOOL_KEYS)
+    return cfg
 
 
 def print_obj(args: dict[str, Any]) -> None:
+    """Pretty-print a configuration dictionary as indented JSON."""
     print(json.dumps(args, indent=4))
 
 
+def _strip_comments(text: str) -> str:
+    """Strip ``#``, ``//`` and ``/* */`` comments and trailing commas.
+
+    String literals are left untouched.
+    """
+    def replace(match: "re.Match[str]") -> str:
+        """Drop the match if it is a comment, keep it if it is a string."""
+        return "" if match.group(1) is not None else match.group(0)
+
+    text = _COMMENT_RE.sub(replace, text)
+    return _TRAILING_COMMA_RE.sub(r"\1", text)
+
+
+def _load_raw(path: str) -> dict[str, Any]:
+    """Read *path*, strip comments and return the JSON object it holds.
+
+    The file may contain a single object or a one-element array wrapping it.
+
+    Raises:
+        ValueError: the path is not a ``.json`` file or the content is not
+            a JSON object.
+        OSError: the file cannot be read.
+        json.JSONDecodeError: the content is not valid JSON.
+    """
+    if not path.endswith(".json"):
+        raise ValueError(f"{path}: not a .json file")
+    with open(path, "r", encoding="utf-8") as handle:
+        data = json.loads(_strip_comments(handle.read()))
+    if isinstance(data, list):
+        data = data[0] if data else {}
+    if not isinstance(data, dict):
+        raise ValueError(f"{path}: top-level value must be a JSON object")
+    return data
+
+
 class Parser:
-    clamps: dict[str, str | tuple[int, int, int] | tuple[bool, bool, bool]] = {
-            "highscore_filename": "highscore.json",
-            "width": (6, 33, 8),
-            "height": (6, 33, 7),
-            "lives": (1, 3, 3),
-            "seed": (0, 0xffff, 42),
-            "points_per_pacgum": (1, 100, 10),
-            "points_per_super_pacgum": (1, 500, 50),
-            "fps": (30, 60, 60),
-            "nb_player": (1, 2, 1),
-            "cheat_mode": (False, True, False),
-            "audio_enable": (False, True, False),
-            "points_per_ghost": (1, 1600, 200)
-    }
-
-    @staticmethod
-    def clean_commentary(file: TextIOWrapper) -> tuple[dict[str, Any],
-                                                       list[int], bool]:
-        clean = []
-        lines = []
-        isline = False
-        for i, line in enumerate(file, 1):
-            if line.startswith("[") or line.startswith("]"):
-                isline = True
-            elif line.lstrip().startswith("#"):
-                lines.append(i)
-            else:
-                clean.append(line)
-        clean_json = '\n'.join(clean)
-        return (ast.literal_eval(clean_json), lines, isline)
-
-    @staticmethod
-    def get_line_nb_including_coms(com_lines: list[int], line: int) -> int:
-        acc = 0
-        for com_line in com_lines:
-            if line >= com_line:
-                acc += 1
-        return line + acc
-
-    @staticmethod
-    def comment(path: str) -> tuple[dict[str, Any], list[int], bool]:
-        with open(path, "r", encoding="utf-8") as file:
-            if ".json" not in path:
-                raise ValueError(
-                    f"{path} is not an accepted"
-                    "format, only .json are allowed")
-            return Parser.clean_commentary(file)
-
-    @staticmethod
-    def clamp_tuple(arg: dict[str, Any]) -> dict[str, Any]:
-        for k, v in arg.items():
-            if isinstance(v, tuple):
-                arg[k] = v[2]
-        return arg
+    """Loads and validates the game configuration file."""
 
     @staticmethod
     def parse_config(argv: list[str]) -> dict[str, Any]:
-        params_clamp: dict[str, Any] = Parser.clamps
-        try:
-            if len(argv) == 0:
-                return Parser.clamp_tuple(params_clamp)
-            params, com_lines, islist = Parser.comment(argv[0])
-        except Exception as e:
-            print(e)
-            return Parser.clamp_tuple(params_clamp)
-        for i, (k, v) in enumerate(params.items(), 2 + 1 * (islist)):
-            real_line_nb = Parser.get_line_nb_including_coms(com_lines, i)
-            if k not in Parser.clamps.keys():
-                print(f"{k} is not accepted, line {real_line_nb}")
-                continue
+        """Return a fully populated, validated configuration dictionary.
 
-            if k == "highscore_filename":
-                if isinstance(v, str):
-                    if ".json" in v and not v.isspace():
-                        params_clamp[k] = v
-                else:
-                    print(f"{v} is not an accepted path, error line:"
-                          f" {real_line_nb}")
-            elif k == "audio_enable" or k == "cheat_mode":
-                if isinstance(v, bool):
-                    params_clamp[k] = v
-                else:
-                    print(f"{v} is not accepted, error line: {real_line_nb}")
+        With no argument the defaults are returned.  Otherwise ``argv[0]`` is
+        loaded and each entry validated; anything invalid is reported and left
+        at its default value.
+        """
+        cfg = defaults()
+        if not argv:
+            return cfg
+        try:
+            raw = _load_raw(argv[0])
+        except (OSError, ValueError, json.JSONDecodeError) as err:
+            print(f"config: {err} -- using defaults")
+            return cfg
+        for key, value in raw.items():
+            Parser._apply(cfg, key, value)
+        return cfg
+
+    @staticmethod
+    def _apply(cfg: dict[str, Any], key: str, value: Any) -> None:
+        """Validate a single ``key: value`` pair and store it into *cfg*."""
+        if key in _STR_KEYS:
+            if isinstance(value, str) and value.endswith(".json"):
+                cfg[key] = value
             else:
-                try:
-                    v = int(v)
-                except ValueError as e:
-                    print(e)
-                    params_clamp[k] = Parser.clamps[k][0]
-                    continue
-                if v < params_clamp[k][0]:
-                    params_clamp[k] = params_clamp[k][0]
-                elif v > params_clamp[k][1]:
-                    params_clamp[k] = params_clamp[k][1]
-                else:
-                    params_clamp[k] = v
-        return Parser.clamp_tuple(params_clamp)
+                print(f"config: '{key}' must be a .json filename"
+                      f" -- keeping {cfg[key]!r}")
+        elif key in _BOOL_KEYS:
+            if isinstance(value, bool):
+                cfg[key] = value
+            else:
+                print(f"config: '{key}' must be true or false"
+                      f" -- keeping {cfg[key]}")
+        elif key in _INT_RANGES:
+            low, high, _ = _INT_RANGES[key]
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                print(f"config: '{key}' must be a number"
+                      f" -- keeping {cfg[key]}")
+                return
+            clamped = max(low, min(high, int(value)))
+            if clamped != value:
+                print(f"config: '{key}'={value} clamped to {clamped}")
+            cfg[key] = clamped
+        else:
+            print(f"config: unknown key '{key}' ignored")

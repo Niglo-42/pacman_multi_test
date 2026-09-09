@@ -1,13 +1,61 @@
-from typing import Any
-import pygame
-from .render import Render, collide_point
+"""Menu screens: main menu, pause menu, parameters, highscores, name entry.
+
+Every screen runs its own event loop. Closing the window raises
+:class:`GameExit`, which unwinds to :meth:`src.game.Game.monitor`.
+"""
 import json
+from typing import Any
+
+import pygame
+
+from ..exceptions import GameExit
+from .render import Render, collide_point
+
+HIGHSCORE_LIMIT = 10
+FONT_PATH = "font/press_start_2p.ttf"
+
+
+def load_scores(path: str) -> dict[str, int]:
+    """Load the highscore file as a clean ``{name: score}`` mapping.
+
+    A missing or corrupt file is treated as an empty leaderboard. Entries
+    whose score is not a non-negative integer are dropped.
+    """
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            raw = json.load(handle)
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(raw, dict):
+        return {}
+    return {
+        str(name): int(score)
+        for name, score in raw.items()
+        if isinstance(score, (int, float)) and not isinstance(score, bool)
+        and score >= 0
+    }
+
+
+def save_score(path: str, name: str, score: int) -> None:
+    """Insert ``name``/``score``, then keep only the top ten entries."""
+    scores = load_scores(path)
+    scores[name] = max(scores.get(name, 0), score)
+    top = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)
+    trimmed = dict(top[:HIGHSCORE_LIMIT])
+    try:
+        with open(path, "w", encoding="utf-8") as handle:
+            json.dump(trimmed, handle, indent=2)
+    except OSError as err:
+        print(f"highscore: could not save to {path}: {err}")
 
 
 class ToggleBox:
+    """A labelled ON/OFF switch used in the parameters screen."""
+
     def __init__(self, string: str, size: int, boolean: bool) -> None:
+        """Render the *string* label and the initial *boolean* state."""
         self.name = string
-        self.font = pygame.font.Font("font/press_start_2p.ttf", size)
+        self.font = pygame.font.Font(FONT_PATH, size)
         self.text = self.font.render(string, False, "#dedeff")
         self.bool_val = boolean
         self.bool = self.font.render("ON" if boolean else "OFF", False,
@@ -19,6 +67,7 @@ class ToggleBox:
         self.draw_box()
 
     def flip(self) -> None:
+        """Toggle the value and re-render the ON/OFF label."""
         self.bool_val = not self.bool_val
         self.bool = self.font.render(
             "ON" if self.bool_val else "OFF",
@@ -26,16 +75,20 @@ class ToggleBox:
         self.b_size_w, self.b_size_h = self.bool.get_size()
 
     def draw_box(self) -> None:
+        """Redraw the label and value onto the widget surface."""
         self.surf.fill(0)
         self.surf.blit(self.text, (0, 0))
         self.surf.blit(self.bool, (self.t_size_w + 10, 0))
 
 
 class ParamBox:
+    """A labelled horizontal slider bound to an integer range."""
+
     def __init__(self, string: str, size: int, min_v: int, max_v: int,
                  range_size: int, value: int) -> None:
+        """Build a *min_v*..*max_v* slider starting at *value*."""
         self.name = string
-        self.font = pygame.font.Font("font/press_start_2p.ttf", size)
+        self.font = pygame.font.Font(FONT_PATH, size)
         self.text = self.font.render(string, False, "#dedeff")
         self.font_val = self.font.render(str(value), False, "#181713")
         self.value = value
@@ -54,6 +107,7 @@ class ParamBox:
         self.pad_w = self.surf.get_size()[0] // 2
 
     def draw_box(self, range_size: int) -> None:
+        """Redraw the label, the filled bar and the current value."""
         percent = self.percent
         self.range_box.fill("#dee7de")
         self.range_box.blit(self.range, (-int(range_size * (1 - percent)), 0))
@@ -65,56 +119,54 @@ class ParamBox:
 
 
 class RangeBox(ParamBox):
+    """Alias of :class:`ParamBox` kept for readability at call sites."""
+
     def __init__(self, string: str, size: int, min_v: int, max_v: int,
                  range_size: int, value: int) -> None:
+        """See :meth:`ParamBox.__init__`."""
         super().__init__(string, size, min_v, max_v, range_size, value)
 
 
 class Menu:
+    """All the out-of-game screens, sharing one :class:`Render`."""
+
     def __init__(self, render: Render) -> None:
+        """Bind to the active :class:`Render` and cache the window size."""
         self.render = render
         self.w, self.h = Render.screen.get_size()
 
     def score(self, path: str, clock: pygame.time.Clock,
               fps: int) -> str:
-        active = True
-        try:
-            with open(path, "r") as file:
-                scores = json.load(file)
-        except (FileNotFoundError, json.JSONDecodeError) as e:
-            print("file seems empty, first game ? ", e)
-            scores = {}
+        """Show the highscore table until Escape is pressed."""
+        scores = load_scores(path)
         Render.screen.fill(0)
         max_char_len = 30
         line_spacing = 2
-        n = max(len(scores), 1)
+        n = min(max(len(scores), 1), HIGHSCORE_LIMIT)
         available_height = (Render.screen.get_height() //
-                            (line_spacing * (n + 2)))
-        size = min(
-            available_height,
-            Render.screen.get_width() // max_char_len)
+                            (line_spacing * (n + 3)))
+        size = min(available_height,
+                   Render.screen.get_width() // max_char_len)
         size = max(size, 1)
-        font = pygame.font.Font("font/press_start_2p.ttf", size)
-        sorted_dict = dict(sorted(scores.items(),
-                                  key=lambda x: x[1], reverse=True))
-        for i, (name, score) in enumerate(sorted_dict.items(), 1):
-            if i == 10:
-                break
-            self.render.puttamere(name + ": " + str(score), font, i * 2)
+        font = pygame.font.Font(FONT_PATH, size)
+        ranked = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)
+        self.render.draw_text("HIGH SCORES", font, 0)
+        for i, (name, score) in enumerate(ranked[:HIGHSCORE_LIMIT], 1):
+            self.render.draw_text(f"{i}. {name} - {score}", font, (i + 1) * 2)
         pygame.display.flip()
-        while active:
+        while True:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    pygame.quit()
-                if event.type == pygame.KEYDOWN and\
-                   event.key == pygame.K_ESCAPE:
+                    raise GameExit
+                if (event.type == pygame.KEYDOWN
+                        and event.key == pygame.K_ESCAPE):
                     return "start"
             clock.tick(fps)
-        return "start"
 
     def get_user_name(self, font: pygame.font.Font, path: str, score: int,
                       clock: pygame.time.Clock, fps: int,
                       max_len: int = 10) -> str:
+        """Prompt for a 1..``max_len`` char name, then store the highscore."""
         pygame.key.start_text_input()
         user_name = ""
         active = True
@@ -124,11 +176,11 @@ class Menu:
         error_surface: pygame.Surface | None = None
         flag_errased = False
         frame = 0
-        self.render.puttamere("Enter your name...", font, 1)
+        self.render.draw_text("Enter your name...", font, 1)
         while active:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    pygame.quit()
+                    raise GameExit
                 if len(user_name) > 0 and error_surface and not flag_errased:
                     flag_errased = True
                     pad_h = pad[1] + txt_surface.get_height()
@@ -169,21 +221,12 @@ class Menu:
             clock.tick(fps)
 
         pygame.key.stop_text_input()
-        try:
-            with open(path, "r") as file:
-                current = json.load(file)
-        except (FileNotFoundError, json.JSONDecodeError) as e:
-            print("file seems empty, first game ? ", e)
-            current = {}
-        if user_name not in current or score > current[user_name]:
-            print(score)
-            current[user_name] = score
-        with open(path, "w") as file:
-            json.dump(current, file)
+        save_score(path, user_name, score)
         return "start"
 
     def param_menu(self, config: dict[str, Any], clock: pygame.time.Clock,
                    fps: int) -> dict[str, Any]:
+        """Let the player tweak the config with sliders/toggles; return it."""
         clamps = {
             "width": (6, 33),
             "height": (6, 33),
@@ -203,7 +246,8 @@ class Menu:
         font_size = self.h // (nb_boxes * 4 + 2)
         range_size = Render.screen.get_size()[0] // 10
         for toggle in toggles:
-            toggle_boxes.append(ToggleBox(toggle, font_size, False))
+            toggle_boxes.append(
+                ToggleBox(toggle, font_size, bool(config.get(toggle, False))))
         for name, (min_v, max_v) in clamps.items():
             current = config.get(name, min_v)
             boxes.append(RangeBox(name, font_size, min_v,
@@ -213,7 +257,7 @@ class Menu:
         while True:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    pygame.quit()
+                    raise GameExit
                 if (event.type == pygame.KEYDOWN and
                         event.key == pygame.K_ESCAPE):
                     for key, val in config.items():
@@ -270,9 +314,10 @@ class Menu:
             clock.tick(fps)
 
     def main_menu(self, clock: pygame.time.Clock, fps: int) -> str:
+        """Show the main menu; return the chosen action string."""
         Render.screen.fill(0)
         nb_btn = 4
-        # size = ratio w/h 248px/1179px
+        # button size: keep the source image aspect ratio (248 / 1179)
         size = (int(self.w * 0.2), int(self.w * 0.2 * 248 / 1179))
         btns = [
             pygame.transform.smoothscale(
@@ -290,14 +335,13 @@ class Menu:
         while True:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    pygame.quit()
+                    raise GameExit
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     if event.button == 1:
                         if play.collidepoint(event.pos):
                             self.render.erase(btns_rect)
                             return "play"
                         elif quit.collidepoint(event.pos):
-                            # self.run = False
                             return "quit"
                         elif param.collidepoint(event.pos):
                             return "param"
@@ -309,9 +353,10 @@ class Menu:
             clock.tick(fps)
 
     def pause_menu(self, clock: pygame.time.Clock, fps: int) -> str:
+        """Show the pause menu; return "play" to resume or "start" to leave."""
         Render.screen.fill(0)
         nb_btn = 2
-        # size = ratio w/h 248px/1179px
+        # button size: keep the source image aspect ratio (248 / 1179)
         size = (int(self.w * 0.2), int(self.w * 0.2 * 248 / 1179))
         btns = [
             pygame.transform.smoothscale(
@@ -329,15 +374,13 @@ class Menu:
         while True:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    # self.run = False
-                    return "start"
+                    raise GameExit
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     if event.button == 1:
                         if resume.collidepoint(event.pos):
                             self.render.erase(btns_rect)
                             return "play"
                         elif back2menu.collidepoint(event.pos):
-                            # self.run = False
                             return "start"
             self.render.hoover_opacity70(btns, btns_rect)
             self.render.draw_obj(btns, btns_rect)

@@ -2,8 +2,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from .speed import update_speeds
 from .collision import check_collision
+from ..constants import LAST_LEVEL
 from ..interface.drawing import draw_lives, draw_fruits
-import pygame
 
 if TYPE_CHECKING:
     from ..game import Game
@@ -12,11 +12,12 @@ if TYPE_CHECKING:
 
 
 def update_entitys(game: Game) -> None:
+    """Advance every entity by one frame (player, second player, ghosts)."""
     role = getattr(game, "role", "solo")
 
     if role == "guest":
-        # Je ne simule QUE mon propre déplacement (contre les murs, pas
-        # contre les fantômes) : l'hôte reste seul juge du reste.
+        # The guest only simulates its own movement against the walls; the
+        # host stays the sole authority on everything else.
         assert game.net is not None
         game.player.update(game.maze)
         game.net.send_input(game.player)
@@ -32,8 +33,8 @@ def update_entitys(game: Game) -> None:
         return
 
     if role == "host":
-        # Le joueur invité n'est jamais simulé localement : sa position
-        # vient du réseau et est injectée avant collisions/pac-gums.
+        # The guest player is never simulated locally: its position comes
+        # from the network and is injected before collisions / pac-gums.
         assert game.net is not None
         guest_input = game.net.poll_input()
         if guest_input:
@@ -50,14 +51,21 @@ def update_entitys(game: Game) -> None:
 
 
 def update_game_state(game: Game) -> int:
+    """Resolve one frame of game rules.
+
+    Returns:
+        ``0`` to keep playing, ``1`` when the whole game is won (last level
+        cleared), ``2`` when a level was cleared and a short "ready?" pause
+        should be shown.
+    """
     flag = 0
     if game.time <= 0:
         game.game_is_over()
         return flag
     role = getattr(game, "role", "solo")
     if role == "guest":
-        # Rien à calculer : pac-gums, score, niveaux, morts sont décidés
-        # par l'hôte et nous arrivent déjà résolus via apply_remote_state.
+        # Nothing to compute: pac-gums, score, levels and deaths are decided
+        # by the host and reach us already resolved via apply_remote_state.
         draw_lives(game)
         return flag
 
@@ -69,7 +77,7 @@ def update_game_state(game: Game) -> int:
     if game.eaten_pellet == game.total_pellet:
         game.level_is_won()
         flag = 2
-        if game.level == 10:
+        if game.level > LAST_LEVEL:
             flag = 1
     update_speeds(game.level, game.ghosts, game.player,
                   state_manager.actual_state)
@@ -81,7 +89,7 @@ def update_game_state(game: Game) -> int:
             state_manager.get_frightened(game)
 
     if update_pellets(game, game.player, game_map):
-        # si une super_pacgum a été mangée
+        # a super pac-gum was eaten
         state_manager.get_frightened(game)
     state_manager.update_ghosts_state(game)
     draw_lives(game)
@@ -94,23 +102,19 @@ def update_game_state(game: Game) -> int:
 
 
 def update_pellets(game: Game, player: Player, map: list[list[int]]) -> bool:
-    # return True quand energizer a été mangé
+    """Eat the tile *player* stands on. Return True on a super pac-gum."""
     energizer = False
     if player and (player.offset_xy) == (0, 0):
         x, y = player.position
         if map[y][x] == 1:
             player.score += game.points_per_pacgum
             game.eaten_pellet += 1
-            # game.render.draw_on_maze(game.maze.tiles[0], y, x)
         elif map[y][x] == 2:
             player.score += game.points_per_super_pacgum
             energizer = True
-            # game.render.draw_on_maze(game.maze.tiles[0], y, x)
         elif map[y][x] == 3:
             player.score += 100
             draw_fruits(game)
-            # a fix , actuellement si on mange
-            # fruit2 il affiche les 2 d'un coup
         if map[y][x] != 0 and hasattr(game, "newly_eaten_tiles"):
             game.newly_eaten_tiles.append((x, y))
         map[y][x] = 0
@@ -122,6 +126,7 @@ def update_pellets(game: Game, player: Player, map: list[list[int]]) -> bool:
 
 
 def get_fruits(game: Game, maze: Maze, tile_size: int) -> None:
+    """Spawn the level's bonus fruit once enough pac-gums have been eaten."""
     if (game.eaten_pellet == 70) and maze.flag_fruit == 0:
         maze.flag_fruit = 0b1
         game.render.fruits[0].blit(maze.add_fruit(game.player.position,

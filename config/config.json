@@ -1,6 +1,8 @@
 [
     {
-        "highscore_filename" : "highscore.json",
+        # Lines starting with '#' (or '//') are comments and are ignored.
+        # '/* ... */' blocks and trailing commas are tolerated too.
+        "highscore_filename": "highscore.json",
         "width": 8,
         "height": 7,
         "lives": 3,
@@ -9,6 +11,7 @@
         "points_per_pacgum": 10,
         "points_per_super_pacgum": 50,
         "points_per_ghost": 200,
-        "cheat_mode": "False"
+        "cheat_mode": false,
+        "audio_enable": false
     }
 ]
