@@ -26,6 +26,8 @@ class Game:
         self.fps: int = args.get("fps", 60)
         self.run = True
         self.path: str = args.get("highscore_filename", "highscore.json")
+        self.btn = None
+        
         self.cheat_mode: bool = args.get("cheat_mode", False)
         self.points_per_pacgum: int = args.get("points_per_pacgum", 50)
         self.points_per_super_pacgum: int = \
