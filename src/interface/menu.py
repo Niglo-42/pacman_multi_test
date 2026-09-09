@@ -370,7 +370,7 @@ class Menu:
             btn.get_rect(center=(pad_w, pad_h + size[1] * i * 2))
             for i, btn in enumerate(btns)
         ]
-        play, param, hg, quit, instructions = btns_rect
+        play, param, hg, instructions, quit = btns_rect
         while True:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
