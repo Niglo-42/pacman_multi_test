@@ -136,8 +136,18 @@ class Game:
             self.render.draw_maze_on_surf_screen()
             draw_entitys(self)
             get_fruits(self, self.maze, self.render.tile_size)
-            if update_game_state(self):
+            state = update_game_state(self)
+            if state == 1:
                 return "won"
+            elif state == 2:
+                update_entitys(self)
+                self.render.draw_maze_on_surf_screen()
+                draw_entitys(self)
+                get_fruits(self, self.maze, self.render.tile_size)
+                self.render.puttamere("ready ?", self.render.font, 0, center=True)
+                pygame.display.flip()
+                pygame.time.wait(1500)
+                
             self.render.putstr(f"Highscore: {self.player.score}",
                                self.render.score, 0)
             self.render.putstr(f"Level: {self.level} Time: {self.time:.2f}",

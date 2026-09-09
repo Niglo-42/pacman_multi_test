@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 from .speed import update_speeds
 from .collision import check_collision
 from ..interface.drawing import draw_lives, draw_fruits
+import pygame
 
 if TYPE_CHECKING:
     from ..game import Game
@@ -48,16 +49,17 @@ def update_entitys(game: Game) -> None:
         g.update(game, flashing)
 
 
-def update_game_state(game: Game) -> bool:
+def update_game_state(game: Game) -> int:
+    flag = 0
     if game.time <= 0:
         game.game_is_over()
-        return False
+        return flag
     role = getattr(game, "role", "solo")
     if role == "guest":
         # Rien à calculer : pac-gums, score, niveaux, morts sont décidés
         # par l'hôte et nous arrivent déjà résolus via apply_remote_state.
         draw_lives(game)
-        return False
+        return flag
 
     game.newly_eaten_tiles = []
     game.global_timer += 1
@@ -66,8 +68,9 @@ def update_game_state(game: Game) -> bool:
     assert game_map is not None
     if game.eaten_pellet == game.total_pellet:
         game.level_is_won()
+        flag = 2
         if game.level == 10:
-            return True
+            flag = 1
     update_speeds(game.level, game.ghosts, game.player,
                   state_manager.actual_state)
     check_collision(game, game.player, game.ghosts)
@@ -87,7 +90,7 @@ def update_game_state(game: Game) -> bool:
         assert game.net is not None
         from ..network.netcode import build_state_packet
         game.net.send(build_state_packet(game))
-    return False
+    return flag
 
 
 def update_pellets(game: Game, player: Player, map: list[list[int]]) -> bool:

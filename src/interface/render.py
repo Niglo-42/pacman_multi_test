@@ -156,9 +156,13 @@ class Render:
         Render.screen.blit(surf, target_rect)
 
     def puttamere(self, string: str, font: pygame.font.Font,
-                  backslash_n: int) -> None:
+                  backslash_n: int, center=False) -> None:
         text = font.render(string, False, "#dedeff")
-        target_rect = text.get_rect(
-            midtop=(Render.screen_rect.centerx,
-                    text.get_height() * backslash_n))
+        if center:
+            target_rect = text.get_rect(
+                center=(Render.screen_rect.center))
+        else:
+            target_rect = text.get_rect(
+                midtop=(Render.screen_rect.centerx,
+                        text.get_height() * backslash_n))
         Render.screen.blit(text, target_rect)
