@@ -11,17 +11,17 @@ def print_obj(args: dict[str, Any]) -> None:
 class Parser:
     clamps: dict[str, str | tuple[int, int] | tuple[bool, bool]] = {
             "highscore_filename": "highscore.json",
-            "width": (6, 33),
-            "height": (6, 33),
-            "lives": (1, 3),
-            "seed": (0, 0xffff),
-            "points_per_pacgum": (1, 100),
-            "points_per_super_pacgum": (1, 500),
-            "fps": (30, 60),
-            "nb_player": (1, 2),
-            "cheat_mode": (False, True),
-            "audio_enable": (False, True),
-            "points_per_ghost": (1, 1600)
+            "width": (6, 33, 8),
+            "height": (6, 33, 7),
+            "lives": (1, 3, 3),
+            "seed": (0, 0xffff, 42),
+            "points_per_pacgum": (1, 100, 10),
+            "points_per_super_pacgum": (1, 500, 50),
+            "fps": (30, 60, 60),
+            "nb_player": (1, 2, 1),
+            "cheat_mode": (False, True, False),
+            "audio_enable": (False, True, False),
+            "points_per_ghost": (1, 1600, 200)
     }
 
     @staticmethod
@@ -61,7 +61,7 @@ class Parser:
     def clamp_tuple(arg: dict[str, Any]) -> dict[str, Any]:
         for k, v in arg.items():
             if isinstance(v, tuple):
-                arg[k] = v[0]
+                arg[k] = v[2]
         return arg
 
     @staticmethod
