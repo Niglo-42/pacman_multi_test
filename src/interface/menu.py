@@ -124,6 +124,7 @@ class Menu:
         error_surface: pygame.Surface | None = None
         flag_errased = False
         frame = 0
+        self.render.puttamere("Enter your name...", font, 1)
         while active:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:

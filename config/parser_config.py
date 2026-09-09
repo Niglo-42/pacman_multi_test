@@ -66,10 +66,10 @@ class Parser:
 
     @staticmethod
     def parse_config(argv: list[str]) -> dict[str, Any]:
-        if len(argv) != 1:
-            raise ValueError(f"This program takes 1 arg, not {len(argv)}")
         params_clamp: dict[str, Any] = Parser.clamps
         try:
+            if len(argv) == 0:
+                return Parser.clamp_tuple(params_clamp)
             params, com_lines, islist = Parser.comment(argv[0])
             print(params, com_lines, islist)
         except Exception as e:
