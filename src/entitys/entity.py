@@ -57,13 +57,18 @@ class Entity:
         self.idx_anim += 1
         self.idx_anim &= 0xf
 
-    def update_tile(self) -> None:
+    def update_tile(self, dir=Dir.X) -> None:
         surf = self.surf
         assert surf is not None
         surf.fill(0)
-        surf.blit(
-            self.tiles[self.anim[self.direction.value[3]][self.idx_anim >> 2]],
-            (0, 0))
+        if dir == dir.X:
+            surf.blit(
+                self.tiles[self.anim[self.direction.value[3]][self.idx_anim >> 2]],
+                (0, 0))
+        else:
+            surf.blit(
+                self.tiles[self.anim[dir.value[3]][self.idx_anim >> 2]],
+                (0, 0))
         self.idx_anim += 1
         self.idx_anim &= 0xf
 
