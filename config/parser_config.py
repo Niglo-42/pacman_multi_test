@@ -9,7 +9,7 @@ def print_obj(args: dict[str, Any]) -> None:
 
 
 class Parser:
-    clamps: dict[str, str | tuple[int, int] | tuple[bool, bool]] = {
+    clamps: dict[str, str | tuple[int, int, int] | tuple[bool, bool, bool]] = {
             "highscore_filename": "highscore.json",
             "width": (6, 33, 8),
             "height": (6, 33, 7),

@@ -78,7 +78,8 @@ On startup a short console prompt offers **solo** or **LAN** modes (see
 | `make lint` | `flake8 .` + `mypy .` with the subject's flags |
 | `make lint-strict` | `flake8 .` + `mypy . --strict` |
 | `make test` | `pytest` |
-| `make clean` | remove `__pycache__`, `.mypy_cache`, `.pytest_cache`, WSL `Zone.Identifier` files |
+| `make package` | build a standalone bundle in `dist/PACMAN42/` (PyInstaller) |
+| `make clean` | remove `__pycache__`, caches, `build/`, `dist/`, WSL `Zone.Identifier` files |
 
 ### Controls
 
@@ -384,9 +385,25 @@ collected in [`project_management/`](project_management/).
 
 ## Packaging & Deployment
 
-*Not yet published.* The subject requires a free, unlisted build on a public
-platform (Steam / Itch.io). The packaging script/spec will live at the repository
-root and the store link will be added here once the build is up.
+A standalone bundle is built with **PyInstaller** from
+[`pacman.spec`](pacman.spec) (at the repository root, as required):
+
+```bash
+make package        # -> dist/PACMAN42/  (executable + _internal/ with all assets)
+```
+
+The spec ships the `images/`, `audio/`, `font/` and `config/` trees inside the
+bundle; `pac-man.py` `chdir()`s into the bundle at startup (when frozen) so the
+game's relative asset paths keep working, redirects the highscore file next to
+the executable, and skips the console network prompt when there is no terminal.
+
+**Publishing to Itch.io** with [butler](https://itch.io/docs/butler/):
+
+```bash
+butler push dist/PACMAN42 <user>/pacman:linux
+```
+
+*Store link: to be added once the (free, unlisted) build is uploaded.*
 
 ---
 
