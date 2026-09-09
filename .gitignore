@@ -13,3 +13,8 @@ pacman.png
 test.py
 
 *.whl					#mazegen zip file
+
+# PyInstaller (keep pacman.spec, drop the build output)
+build/
+dist/
+*.manifest

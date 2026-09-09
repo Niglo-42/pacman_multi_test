@@ -2,7 +2,28 @@ from typing import Any
 from config.parser_config import Parser, print_obj
 from src.game import Game
 from src.network.netcode import NetHost, NetGuest, can_reach_host
+import os
 import sys
+
+
+def _bootstrap_frozen() -> None:
+    """PyInstaller bundle setup.
+
+    Assets are loaded through paths relative to the working directory, so we
+    chdir() into the bundle where they were shipped. A windowed build has no
+    real console, so guard sys.stdout / sys.stderr to keep print() harmless.
+    """
+    if not getattr(sys, "frozen", False):
+        return
+    bundle_dir = getattr(sys, "_MEIPASS", os.path.dirname(sys.executable))
+    os.chdir(bundle_dir)
+    if sys.stdout is None:
+        sys.stdout = open(os.devnull, "w")
+    if sys.stderr is None:
+        sys.stderr = open(os.devnull, "w")
+
+
+_bootstrap_frozen()
 
 
 def setup_network(args: dict[str, Any]) -> dict[str, Any]:
@@ -10,6 +31,11 @@ def setup_network(args: dict[str, Any]) -> dict[str, Any]:
     choisir solo / hôte / invité avant de lancer la fenêtre pygame.
     À terme, ce choix peut migrer dans le menu graphique (menu.py) en
     stockant simplement les mêmes clés dans `args`."""
+    # Pas de console interactive (build packagé sans terminal, ou stdin
+    # redirigé) : on saute le prompt et on lance une partie solo classique.
+    if sys.stdin is None or not sys.stdin.isatty():
+        args["role"] = "solo"
+        return args
     print("Mode de jeu : [1] Solo/local  [2] Héberger (LAN)  "
           "[3] Rejoindre (LAN) [4] Multi/scinder Rejoindre [5] Host")
     choice = input("> ").strip()
@@ -82,6 +108,11 @@ def main(argv: list[str]) -> int:
         print_obj(args)
     except ValueError as e:
         print(e)
+    if getattr(sys, "frozen", False):
+        # keep the highscore file next to the executable (writable, and
+        # not wiped when the bundle is replaced on the next update)
+        args["highscore_filename"] = os.path.join(
+            os.path.dirname(sys.executable), "highscore.json")
     args = setup_network(args)
     game = Game(args)
     game.monitor()

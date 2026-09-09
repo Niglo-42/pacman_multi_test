@@ -13,7 +13,7 @@ MYPY_FLAGS := --warn-return-any \
               --check-untyped-defs
 
 .DEFAULT_GOAL := help
-.PHONY: help install run debug clean lint lint-strict test
+.PHONY: help install run debug clean lint lint-strict test package
 
 help:
 	@echo "install      Install project dependencies from uv.lock"
@@ -23,6 +23,7 @@ help:
 	@echo "lint         Run flake8 and mypy"
 	@echo "lint-strict  Run flake8 and mypy --strict"
 	@echo "test         Run the test suite"
+	@echo "package      Build a standalone bundle in dist/PACMAN42/ (PyInstaller)"
 
 install:
 	uv sync
@@ -35,7 +36,7 @@ debug:
 
 clean:
 	@find . -path ./.venv -prune -o -type d -name '__pycache__' -exec rm -rf {} +
-	@rm -rf .mypy_cache .pytest_cache
+	@rm -rf .mypy_cache .pytest_cache build dist
 	@find . -type f -name '*Zone.Identifier*' -delete
 	@echo "Cleaned."
 
@@ -49,3 +50,9 @@ lint-strict:
 
 test:
 	$(RUN) pytest
+
+package:
+	$(RUN) pyinstaller --noconfirm pacman.spec
+	@echo ""
+	@echo "Bundle ready: dist/PACMAN42/"
+	@echo "Publish:      butler push dist/PACMAN42 <user>/pacman:linux"

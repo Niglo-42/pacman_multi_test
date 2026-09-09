@@ -15,11 +15,12 @@ dependencies = [
 dev = [
     "flake8>=7.3.0",
     "mypy>=2.3.0",
+    "pyinstaller>=6.11.0",
     "pytest>=9.1.1",
 ]
 
 [tool.mypy]
-exclude = ['\.venv']
+exclude = ['\.venv', '^build/', '^dist/']
 plugins = ['pydantic.mypy']
 
 [[tool.mypy.overrides]]
