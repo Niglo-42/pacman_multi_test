@@ -171,7 +171,7 @@ class Game:
             self.clock.tick(self.fps)  # caps the loop at fps iterations / s
         return "quit"
 
-    def get_ready(self, fisrt_lvl: bool) -> None:
+    def get_ready(self, first_lvl: bool) -> None:
         """Freeze the board and run a 3-2-1 countdown before the level starts.
 
         The level timer is not touched during the countdown. Escape skips it;
@@ -187,11 +187,11 @@ class Game:
         scrim.fill((0, 0, 0, 160))
         font = pygame.font.Font(FONT_PATH, self.render.tile_size * 6)
 
-        time = (3, 2, 1)
-        fisrt_lvl_time = (5, 4, 3, 2, 1)
-        timer = fisrt_lvl_time if fisrt_lvl else time
-        if fisrt_lvl:
-            self.audio.play_sound('ready')
+        countdown = (3, 2, 1)
+        first_lvl_countdown = (5, 4, 3, 2, 1)
+        timer = first_lvl_countdown if first_lvl else countdown
+        # if first_lvl:
+        #     self.audio.play_sound('ready')
 
         for count in timer:
             digit = font.render(str(count), False, "#ffd24a")
@@ -237,8 +237,8 @@ class Game:
             g.state = GhostState.SCATTER
             g.position = g.spawn
             g.offset_xy = (0, 0)
-        if self.player.lives == 1:
-            self.audio.play_sound('life')
+        # if self.player.lives == 1:
+        #     self.audio.play_sound('life')
 
     def game_is_over(self) -> None:
         """Show the "game over" screen with the final score for ~2 seconds."""
