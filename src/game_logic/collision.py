@@ -27,6 +27,7 @@ def check_collision(game: Game, player: Player, ghosts: list[Ghost]) -> None:
             if ghost.state.is_lethal and not game.cheat_mode:
                 game.player_died(player, ghosts)
             elif ghost.state == GhostState.FRIGHTENED:
+                # game.audio.play_sound('eaten')
                 ghost.alive = False
                 ghost.state = GhostState.EYES
                 ghost.changing_side = False

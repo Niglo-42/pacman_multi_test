@@ -1,10 +1,11 @@
 """Factory helpers that (re)build the maze, the player and the ghosts."""
 from __future__ import annotations
 
-import random
 from typing import TYPE_CHECKING
 
+import random
 import pygame
+from .interface.audio import Audio
 
 if TYPE_CHECKING:
     from .game import Game
@@ -103,3 +104,11 @@ def init_new_level(self: Game, seed: int | None = None) -> None:
         self.player2.score = score2
     self.ghosts = init_ghosts(self)
     self.render = Render(self.maze, False, self.scinder)
+
+
+def init_audio(game: Game) -> Audio | None:
+    enabled = game.args.get("audio_enable", False)
+    if enabled:
+        audio = Audio()
+        return audio
+    return None
