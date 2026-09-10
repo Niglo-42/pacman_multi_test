@@ -11,6 +11,7 @@ from .game_logic.direction import Dir
 from .game_logic.ghosts_state import GhostState, GhostStateManager
 from .game_logic.updates import update_entitys, update_game_state, get_fruits
 from .init import init_ghosts, init_maze, init_player, init_new_level
+from .init import init_audio
 from .exceptions import GameExit
 from .constants import LAST_LEVEL
 
@@ -24,6 +25,7 @@ class Game:
         pygame.font.init()
         self.args = args
         self.first = True
+        self.audio = init_audio(self)
         self.start_new_game(self.args)
 
     def start_new_game(self, args: dict[str, Any]) -> None:
@@ -77,7 +79,6 @@ class Game:
         self.ghost_state = GhostState.SCATTER
         self.elroy_cooldown: tuple[bool, int] = (False, 0)
         self.state_manager = GhostStateManager()
-        self.audio_enabled = args.get("audio_enable", False)
         self.player = init_player(self, 0, args.get("lives", 3))
         # In LAN both machines always have a player2: on the host it is the
         # networked avatar of the guest, on the guest it is the display-only
@@ -133,6 +134,7 @@ class Game:
         pygame.quit()
 
     def play(self) -> str:
+        # self.audio.chan.play(self.audio.sound_dic["eyes"], -1)
         """Run one game (all levels) and return the next router action."""
         while self.run or self.time <= 0:
             for event in pygame.event.get():
@@ -145,7 +147,7 @@ class Game:
                         self.eaten_pellet = self.total_pellet
             if self.pending_ready:
                 self.pending_ready = False
-                self.get_ready()
+                self.get_ready(self.level == 1)
             if self.player.lives <= 0 or self.time <= 0:
                 self.game_is_over()
                 return "get_input"
@@ -169,7 +171,7 @@ class Game:
             self.clock.tick(self.fps)  # caps the loop at fps iterations / s
         return "quit"
 
-    def get_ready(self) -> None:
+    def get_ready(self, fisrt_lvl: bool) -> None:
         """Freeze the board and run a 3-2-1 countdown before the level starts.
 
         The level timer is not touched during the countdown. Escape skips it;
@@ -185,7 +187,13 @@ class Game:
         scrim.fill((0, 0, 0, 160))
         font = pygame.font.Font(FONT_PATH, self.render.tile_size * 6)
 
-        for count in (3, 2, 1):
+        time = (3, 2, 1)
+        fisrt_lvl_time = (5, 4, 3, 2, 1)
+        timer = fisrt_lvl_time if fisrt_lvl else time
+        if fisrt_lvl:
+            self.audio.play_sound('ready')
+
+        for count in timer:
             digit = font.render(str(count), False, "#ffd24a")
             rect = digit.get_rect(center=Render.screen_rect.center)
             for _ in range(self.fps):
@@ -202,6 +210,8 @@ class Game:
 
     def player_died(self, player: Player, ghosts: list[Ghost]) -> None:
         """Play the death animation, then respawn *player* and the ghosts."""
+        # print("keepalive busy:", pygame.mixer.Channel(0).get_busy())
+        # self.audio.play_sound('death')
         self.elroy_cooldown = (True, self.global_timer)
         player.alive = False
         player.lives -= 1
@@ -227,6 +237,8 @@ class Game:
             g.state = GhostState.SCATTER
             g.position = g.spawn
             g.offset_xy = (0, 0)
+        if self.player.lives == 1:
+            self.audio.play_sound('life')
 
     def game_is_over(self) -> None:
         """Show the "game over" screen with the final score for ~2 seconds."""
