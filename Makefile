@@ -36,7 +36,7 @@ debug:
 
 clean:
 	@find . -path ./.venv -prune -o -type d -name '__pycache__' -exec rm -rf {} +
-	@rm -rf .mypy_cache .pytest_cache build dist
+	@rm -rf .mypy_cache .pytest_cache
 	@find . -type f -name '*Zone.Identifier*' -delete
 	@echo "Cleaned."
 

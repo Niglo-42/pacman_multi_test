@@ -89,7 +89,7 @@ On startup a short console prompt offers **solo** or **LAN** modes (see
 | `make lint-strict` | `flake8 .` + `mypy . --strict` |
 | `make test` | `pytest` — config-parser and highscore unit tests ([`tests/`](tests/)) |
 | `make package` | build a standalone bundle in `dist/PACMAN42/` (PyInstaller) |
-| `make clean` | remove `__pycache__`, caches, `build/`, `dist/`, WSL `Zone.Identifier` files |
+| `make clean` | remove `__pycache__`, caches, WSL `Zone.Identifier` files |
 
 ### Controls
 
@@ -440,7 +440,7 @@ cd dist/PACMAN42 && ./PACMAN42
 
 ### 2. Build the Windows `.exe` (on Windows, outside WSL)
 
-Copy the project to Windows (e.g. `\\wsl$\Ubuntu\home\jreibel\42_projects\PACMAN42`
+Copy the project to Windows (e.g. `\\wsl$\Ubuntu\home\PACMAN42`
 → `C:\…\PACMAN42`), making sure it contains `pac-man.py`, `pacman.spec`,
 `assets\ config\` **and** `mazegenerator-2.1.0-py3-none-any.whl`
 (the wheel is git-ignored, so it is absent from a fresh clone — copy it manually).
@@ -486,12 +486,12 @@ Create the game page once at <https://itch.io/game/new> (Kind of project:
 
 ```bash
 butler login                                            # one-time browser OAuth
-butler push dist/PACMAN42     ftjreibel/pacman2:linux    # Linux build
-butler push dist\PACMAN42     ftjreibel/pacman2:windows  # Windows build (run on Windows)
-butler status ftjreibel/pacman2                          # channels, versions, download URLs
+butler push dist/PACMAN42     'username'/pacman:linux    # Linux build
+butler push dist/PACMAN42     'username'/pacman:windows  # Windows build (run on Windows)
+butler status 'username'/pacman                          # channels, versions, download URLs
 ```
 
-`ftjreibel` is the **itch.io username** (`ftjreibel.itch.io`), not the 42 login.
+'username' is the **itch.io username**, not the 42 login.
 `:linux` / `:windows` are channel names — itch tags each build's platform from them.
 
 *Store link: to be added once the build is uploaded.*
