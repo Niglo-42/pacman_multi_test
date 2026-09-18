@@ -339,7 +339,6 @@ pac-man.py                 entry point: parse argv, config, optional net setup, 
     ├── network/
     │   └── netcode.py     NetHost / NetGuest — UDP peer-to-peer LAN co-op (host-authoritative)
     │
-    ├── constants.py       game-wide constants (level count)
     └── exceptions.py      GameExit — unwinds any event loop to close the window cleanly
 ```
 
@@ -409,8 +408,8 @@ The game is packaged as a **self-contained bundle with PyInstaller**, driven by
 PyInstaller does **not** cross-compile: a Linux bundle must be built on Linux, a
 Windows bundle on Windows. The single `pacman.spec` works on both.
 
-**What the spec does** — bundles the `images/`, `audio/`, `font/` and `config/`
-trees inside the build, declares `mazegenerator` as a hidden import, and produces
+**What the spec does** — bundles the `assets/` (`images/`, `audio/`, `font/`)
+and `config/` trees inside the build, declares `mazegenerator` as a hidden import, and produces
 a windowed (`console=False`) one-folder build. At startup, when frozen,
 [`pac-man.py`](pac-man.py) `_bootstrap_frozen()`:
 
@@ -443,7 +442,7 @@ cd dist/PACMAN42 && ./PACMAN42
 
 Copy the project to Windows (e.g. `\\wsl$\Ubuntu\home\jreibel\42_projects\PACMAN42`
 → `C:\…\PACMAN42`), making sure it contains `pac-man.py`, `pacman.spec`,
-`images\ audio\ font\ config\` **and** `mazegenerator-2.1.0-py3-none-any.whl`
+`assets\ config\` **and** `mazegenerator-2.1.0-py3-none-any.whl`
 (the wheel is git-ignored, so it is absent from a fresh clone — copy it manually).
 
 Install Python for Windows first (`winget install Python.Python.3.12`, or
@@ -508,7 +507,7 @@ butler status ftjreibel/pacman2                          # channels, versions, d
 | `py : Le terme «py» n'est pas reconnu` | Python not installed **on Windows** (WSL's Python doesn't count). Install it, reopen the terminal. |
 | `Set-ExecutionPolicy … Bypass` errors | `Bypass` is the *value*: `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force`. Or skip venv activation and call `venv\Scripts\python.exe` directly. |
 | `make lint` scans `dist/` / `build/` | Already excluded in [`.flake8`](.flake8) and `[tool.mypy]`; `make clean` removes both. |
-| Packaged game can't find `images/…` | Launch from the bundle folder; the frozen `chdir()` handles this — do not move the exe out of its folder. |
+| Packaged game can't find `assets/images/…` | Launch from the bundle folder; the frozen `chdir()` handles this — do not move the exe out of its folder. |
 
 ---
 

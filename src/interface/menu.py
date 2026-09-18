@@ -12,7 +12,7 @@ from ..exceptions import GameExit
 from .render import Render, collide_point
 
 HIGHSCORE_LIMIT = 10
-FONT_PATH = "font/press_start_2p.ttf"
+FONT_PATH = "assets/font/press_start_2p.ttf"
 
 
 def load_scores(path: str) -> dict[str, int]:
@@ -360,7 +360,7 @@ class Menu:
         size = (int(self.w * 0.2), int(self.w * 0.2 * 248 / 1179))
         btns = [
             pygame.transform.smoothscale(
-                pygame.image.load(f"images/buttons/btn{i}.png")
+                pygame.image.load(f"assets/images/buttons/btn{i}.png")
                 .convert_alpha(), size) for i in range(nb_btn)
         ]
         bloc_size = size[1] * nb_btn * 2
@@ -401,7 +401,7 @@ class Menu:
         size = (int(self.w * 0.2), int(self.w * 0.2 * 248 / 1179))
         btns = [
             pygame.transform.smoothscale(
-                pygame.image.load(f"images/buttons/pause_btn{i}.png")
+                pygame.image.load(f"assets/images/buttons/pause_btn{i}.png")
                 .convert_alpha(), size) for i in range(nb_btn)
         ]
         bloc_size = size[1] * nb_btn * 2

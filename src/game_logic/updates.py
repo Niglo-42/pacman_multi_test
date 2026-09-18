@@ -2,13 +2,16 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from .speed import update_speeds
 from .collision import check_collision
-from ..constants import LAST_LEVEL
 from ..interface.drawing import draw_lives, draw_fruits
 
 if TYPE_CHECKING:
     from ..game import Game
     from ..entitys.player import Player
     from ..maze.maze import Maze
+
+# Number of levels a full game is made of. Reaching the end of the last one
+# triggers the victory screen.
+LAST_LEVEL = 10
 
 
 def update_entitys(game: Game) -> None:

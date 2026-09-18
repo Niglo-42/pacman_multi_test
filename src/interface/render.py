@@ -10,7 +10,7 @@ import pygame
 from ..entitys.entity import Entity
 from ..maze.maze import Maze
 
-FONT_PATH = "font/press_start_2p.ttf"
+FONT_PATH = "assets/font/press_start_2p.ttf"
 
 
 def collide_point(rect: pygame.Rect, x: int, y: int) -> bool:
@@ -83,18 +83,20 @@ class Render:
 
         self.maze.tiles = [
             pygame.transform.scale(
-                pygame.image.load(f"images/maze/{i}.png").convert_alpha(),
+                pygame.image.load(
+                    f"assets/images/maze/{i}.png").convert_alpha(),
                 (self.tile_size, self.tile_size)) for i in range(32)]
         self.maze.fruit_tiles = [
             pygame.transform.scale(
                 pygame.image.load(
-                    f"images/sprites/{str(i).zfill(3)}.png").convert_alpha(),
+                    f"assets/images/sprites/{str(i).zfill(3)}."
+                    "png").convert_alpha(),
                 (self.tile_size, self.tile_size)) for i in range(33, 41)]
 
         self.maze_rect = maze_surf.get_rect(
             center=Render.screen.get_rect().center)
         self.lives_img = pygame.transform.scale(
-            pygame.image.load("images/sprites/015.png").convert_alpha(),
+            pygame.image.load("assets/images/sprites/015.png").convert_alpha(),
             (self.tile_size * 2, self.tile_size * 2))
         self.lives_rect = self.lives_img.get_rect(
             topleft=self.maze_rect.bottomleft)

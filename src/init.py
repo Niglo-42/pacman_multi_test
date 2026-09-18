@@ -60,7 +60,7 @@ def init_player(self: Game, id: int, lives: int) -> Player:
         surf=pygame.Surface((self.render.tile_size * 2,
                             self.render.tile_size * 2), pygame.SRCALPHA),
         tiles=[pygame.transform.scale
-               (pygame.image.load(f"images/sprites/{str(i).zfill(3)}."
+               (pygame.image.load(f"assets/images/sprites/{str(i).zfill(3)}."
                                   "png").convert_alpha(),
                                  (self.render.tile_size * 2,
                                   self.render.tile_size * 2))

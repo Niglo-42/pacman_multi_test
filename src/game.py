@@ -9,11 +9,11 @@ from .entitys.player import Player
 from .entitys.ghosts import Ghost
 from .game_logic.direction import Dir
 from .game_logic.ghosts_state import GhostState, GhostStateManager
-from .game_logic.updates import update_entitys, update_game_state, get_fruits
+from .game_logic.updates import (update_entitys, update_game_state,
+                                 get_fruits, LAST_LEVEL)
 from .init import init_ghosts, init_maze, init_player, init_new_level
 from .init import init_audio
 from .exceptions import GameExit
-from .constants import LAST_LEVEL
 
 
 class Game:

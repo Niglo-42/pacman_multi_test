@@ -18,9 +18,7 @@ Evidence for how the project was driven (subject §VIII). Team: `jreibel`, `tbel
 | Ghost AI, state machine, speed tables | `jreibel` |
 | Rendering, menus, HUD, animations | shared |
 | Config parser, highscores | `tbelard` |
-| Packaging (PyInstaller / itch.io), LAN mode | `jreibel` |
-
-_(Adjust to match reality before the defense.)_
+| Packaging (PyInstaller / itch.io), LAN mode | shared |
 
 ## Timeline
 

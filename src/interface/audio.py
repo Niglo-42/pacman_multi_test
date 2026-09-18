@@ -18,7 +18,7 @@ class Audio:
             self.working = False
         try:
             for s in SOUNDS:
-                new_sound = pygame.mixer.Sound(f"audio/{s}.wav")
+                new_sound = pygame.mixer.Sound(f"assets/audio/{s}.wav")
                 self.sound_dic[s] = new_sound
         except Exception as e:
             print(f"problem while loading track: {e}")

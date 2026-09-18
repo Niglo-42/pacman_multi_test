@@ -44,7 +44,7 @@ class Ghost(Entity):
         """Load and scale sprite files ``start..end`` to 2x tile size."""
         return [
             pygame.transform.scale(
-                pygame.image.load(f"images/sprites/"
+                pygame.image.load(f"assets/images/sprites/"
                                   f"{str(i).zfill(3)}.png").convert_alpha(),
                                  (size * 2, size * 2)) for i in range(start,
                                                                       end)
@@ -204,7 +204,7 @@ class Blinky(Ghost):
         self.tiles = [
             pygame.transform.scale(
                 pygame.image.load(
-                    f"images/sprites/{str(i).zfill(3)}."
+                    f"assets/images/sprites/{str(i).zfill(3)}."
                     "png").convert_alpha(),
                 (size * 2,
                  size * 2)) for i in range(41, 49, 1)]
@@ -238,8 +238,9 @@ class Pinky(Ghost):
         self.tiles = [
             pygame.transform.scale(
                 pygame.image.load(
-                    f"images/sprites/{str(i).zfill(3)}.png").convert_alpha(), (
-                        size * 2, size * 2)) for i in range(53, 61, 1)]
+                    f"assets/images/sprites/{str(i).zfill(3)}."
+                    "png").convert_alpha(),
+                (size * 2, size * 2)) for i in range(53, 61, 1)]
 
     def get_target(self, player: Player, maze: Maze) -> tuple[int, int]:
         """Chase: four tiles ahead of the player."""
@@ -271,7 +272,8 @@ class Inky(Ghost):
         self.tiles = [
             pygame.transform.scale(
                 pygame.image.load(
-                    f"images/sprites/{str(i).zfill(3)}.png").convert_alpha(),
+                    f"assets/images/sprites/{str(i).zfill(3)}."
+                    "png").convert_alpha(),
                 (size * 2,
                  size * 2)) for i in range(65, 73, 1)]
 
@@ -309,7 +311,8 @@ class Clyde(Ghost):
         self.tiles = [
             pygame.transform.scale(
                 pygame.image.load(
-                    f"images/sprites/{str(i).zfill(3)}.png").convert_alpha(),
+                    f"assets/images/sprites/{str(i).zfill(3)}."
+                    "png").convert_alpha(),
                 (size * 2,
                  size * 2)) for i in range(78, 86, 1)]
 

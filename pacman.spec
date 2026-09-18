@@ -6,15 +6,14 @@
     Publish:  butler push dist/PACMAN42 <user>/pacman:<channel>
 
 The game loads every asset through a path relative to the working directory
-(e.g. "images/sprites/000.png", "font/press_start_2p.ttf", "config/..."), so
-those trees must ship inside the bundle. pac-man.py chdir()s into the bundle
-directory at startup when frozen, which keeps all those relative paths valid.
+(e.g. "assets/images/sprites/000.png", "assets/font/press_start_2p.ttf",
+"config/..."), so those trees must ship inside the bundle. pac-man.py
+chdir()s into the bundle directory at startup when frozen, which keeps all
+those relative paths valid.
 """
 
 datas = [
-    ('images', 'images'),
-    ('audio', 'audio'),
-    ('font', 'font'),
+    ('assets', 'assets'),
     ('config', 'config'),
 ]
 
@@ -49,7 +48,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    # icon='images/icon.ico',  # drop a .ico (Windows) / .icns (macOS) here to set one
+    # icon='assets/images/icon.ico',  # drop a .ico (Windows) / .icns (macOS) here to set one
 )
 coll = COLLECT(
     exe,
